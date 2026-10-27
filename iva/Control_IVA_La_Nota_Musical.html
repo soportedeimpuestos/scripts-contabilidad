@@ -352,7 +352,16 @@ table.rep-year tr.grand td{font-size:11.5px}
 .med-ticks{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-faint);margin-top:6px}
 .factor-box{display:flex;flex-direction:column;gap:16px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:17px 19px;margin-bottom:16px}
 .factor-row{display:grid;grid-template-columns:1fr auto;gap:9px 14px;align-items:center}
-.factor-row .factor-lbl{font-size:13px;font-weight:600;color:var(--ink)}
+.factor-row .factor-lbl{font-size:13px;font-weight:600;color:var(--ink);display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.f-ic{width:18px;height:18px;flex:none;color:var(--mint-ink)}
+.factor-lbl.fc .f-ic{color:var(--peach-ink)}
+.f-ic.sm{width:13px;height:13px;vertical-align:-2px;color:var(--lav-ink)}
+.proy-chart{margin-bottom:16px}
+.proy-tbl input.pcell.manual{border-color:var(--lav-ink);background:color-mix(in srgb,var(--lav) 45%,var(--surface))}
+#proyPending:not(:empty){margin-bottom:14px}
+/* accesibilidad: foco visible y movimiento reducido */
+button:focus-visible,.tab:focus-visible,select:focus-visible,input[type=range]:focus-visible,a:focus-visible{outline:2px solid var(--lav-ink);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;scroll-behavior:auto!important}}
 .factor-row .factor-val{font-family:var(--font-dis);font-weight:800;font-size:19px;color:var(--mint-ink);min-width:60px;text-align:right}
 .factor-row .factor-val.fc{color:var(--peach-ink)}
 .factor-row input[type=range]{grid-column:1/3;width:100%;height:7px;accent-color:var(--mint-ink);cursor:pointer}
@@ -555,17 +564,19 @@ table.rep tr.net td:first-child{background:color-mix(in srgb,var(--mint) 26%,var
         <div class="proy-days" id="proyDays"></div>
         <button class="btn ghost sm" id="proyReset" title="Dejar los valores como al inicio"><svg viewBox="0 0 24 24" fill="none" style="width:15px;height:15px"><path d="M3 12a9 9 0 109-9 9 9 0 00-7 3.3M3 3v4h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>Reset</button>
       </div>
+      <div id="proyPending"></div>
       <div class="kpis" id="proyKpis"></div>
       <div class="medidor" id="proyMedidor"></div>
+      <div class="chartbox proy-chart"><h3 id="proyChartTitle">IVA neto por mes y proyección</h3><div class="cv"><canvas id="proyChart" role="img" aria-label="Gráfico de IVA neto real por mes y proyección del mes seleccionado"></canvas></div></div>
       <div class="factor-box">
         <div class="factor-row">
-          <span class="factor-lbl">📈 Variación general en Ventas (mueve con el mouse)</span>
-          <span class="factor-val" id="fvTxt">0%</span>
+          <label class="factor-lbl" for="fvSlider"><svg class="f-ic" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 18L9 11l4 4 7-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h5v5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Variación general en Ventas</label>
+          <span class="factor-val" id="fvTxt" aria-live="polite">0%</span>
           <input type="range" id="fvSlider" min="-50" max="100" step="1" value="0" aria-label="Variación general en ventas">
         </div>
         <div class="factor-row">
-          <span class="factor-lbl">🛒 Variación general en Compras (mueve con el mouse)</span>
-          <span class="factor-val fc" id="fcTxt">0%</span>
+          <label class="factor-lbl fc" for="fcSlider"><svg class="f-ic" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 4h2l2.4 11.2a2 2 0 002 1.6h7.7a2 2 0 002-1.5L21 8H6.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="20" r="1.3" fill="currentColor"/><circle cx="17" cy="20" r="1.3" fill="currentColor"/></svg>Variación general en Compras</label>
+          <span class="factor-val fc" id="fcTxt" aria-live="polite">0%</span>
           <input type="range" id="fcSlider" min="-50" max="150" step="1" value="0" aria-label="Variación general en compras">
         </div>
       </div>
@@ -661,7 +672,7 @@ table.rep tr.net td:first-child{background:color-mix(in srgb,var(--mint) 26%,var
   <div class="pf-bar"><div class="pf-fill" id="pfBar" style="width:0%"></div></div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 "use strict";
@@ -717,6 +728,13 @@ const Q=[[0,1,2,3],[4,5,6,7],[8,9,10,11]];
 const QLBL=["1er cuatrimestre","2do cuatrimestre","3er cuatrimestre"];
 function corteKey(s){ const m=String(s||"").match(/(\d{1,2})\/([a-zñ]{3})\/(\d{4})/i); if(!m)return 0; return (+m[3])*10000+((MES_ABBR[m[2].toLowerCase()]||0))*100+(+m[1]); }
 function latestPeriod(){ const a=Object.values(state.periods); if(!a.length)return null; return a.slice().sort((x,y)=>(x.year-y.year)||(x.mes-y.mes)||(corteKey(x.corte)-corteKey(y.corte))).pop(); }
+function activeYear(){ const p=latestPeriod(); return p?p.year:new Date().getFullYear(); }
+// rango de días [d1,d2] de una fracción guardada (cutDate o texto del rango)
+function fracRange(p){
+  if(p.cutDate && p.cutDate.d1!=null) return [p.cutDate.d1,p.cutDate.d2];
+  const mm=String(p.rango||"").match(/(\d+)\s*\/\s*\w+\s*\/\s*\d+\s*-\s*(\d+)/);
+  return mm?[+mm[1],+mm[2]]:[1,lastDay(p.year,p.mes)];
+}
 function effectiveCorte(){ if(state.corteOverride)return state.corteOverride; const p=latestPeriod(); return p?p.corte:null; }
 function defaultCuat(md){ for(let q=2;q>=0;q--){ if(Q[q].some(mi=>md[mi]))return q; } return 0; }
 
@@ -729,6 +747,7 @@ function saveCfg(){ if(window.__SHARED__)return; try{localStorage.setItem(CFG_KE
    PARSERS
    =========================================================== */
 function readWB(file){
+  if(typeof XLSX==="undefined") return Promise.reject(new Error("No se pudo cargar el lector de Excel (requiere conexión a internet la primera vez que se abre el archivo). Verifica la conexión y vuelve a abrir el aplicativo."));
   return new Promise((res,rej)=>{
     const r=new FileReader();
     r.onload=e=>{ try{ res(XLSX.read(new Uint8Array(e.target.result),{type:"array",cellDates:true})); }catch(err){ rej(err);} };
@@ -747,7 +766,7 @@ function findPeriodo(rows){
         const dates=[...scope.matchAll(/(\d{1,2})\/([a-zñ]{3})\/(\d{4})/gi)];
         if(dates.length){
           const s=dates[0], e=dates[dates.length-1];
-          return {d1:+s[1],mo1:MES_ABBR[s[2].toLowerCase()],y1:+s[3],d2:+e[1],mo2:MES_ABBR[e[2].toLowerCase()],y2:+e[3],raw:c.trim()};
+          return {d1:+s[1],mo1:MES_ABBR[s[2].toLowerCase()],y1:+s[3],d2:+e[1],mo2:MES_ABBR[e[2].toLowerCase()],y2:+e[3],raw:c.trim(),src:"hdr"};
         }
       }
     }
@@ -758,11 +777,32 @@ function findPeriodo(rows){
   if(fcol>=0){
     let mn=null,mx=null;
     for(const row of rows){ const v=row[fcol]; if(v instanceof Date && !isNaN(v)){ if(!mn||v<mn)mn=v; if(!mx||v>mx)mx=v; } }
-    if(mn&&mx){ return {d1:mn.getDate(),mo1:mn.getMonth(),y1:mn.getFullYear(),d2:mx.getDate(),mo2:mx.getMonth(),y2:mx.getFullYear(),raw:`${mn.getDate()}/${MESES[mn.getMonth()].slice(0,3).toLowerCase()}/${mn.getFullYear()} - ${mx.getDate()}/${MESES[mx.getMonth()].slice(0,3).toLowerCase()}/${mx.getFullYear()}`}; }
+    if(mn&&mx){ return {d1:mn.getDate(),mo1:mn.getMonth(),y1:mn.getFullYear(),d2:mx.getDate(),mo2:mx.getMonth(),y2:mx.getFullYear(),raw:`${mn.getDate()}/${MESES[mn.getMonth()].slice(0,3).toLowerCase()}/${mn.getFullYear()} - ${mx.getDate()}/${MESES[mx.getMonth()].slice(0,3).toLowerCase()}/${mx.getFullYear()}`,src:"fecha"}; }
   }
   return null;
 }
-const num = x => (typeof x==="number")?x : (x==null||x==="")?0 : (isNaN(+x)?0:+x);
+// Convierte celdas numéricas o texto ("1.234.567,89", "$ 1,234.50", "(1.000)") a número
+function toNum(x){
+  if(typeof x==="number") return isFinite(x)?x:null;
+  if(x==null) return null;
+  let t=String(x).trim(); if(!t) return null;
+  let neg=false;
+  if(/^\(.*\)$/.test(t)){ neg=true; t=t.slice(1,-1); }
+  t=t.replace(/[$\s\u00a0]/g,"");
+  if(t.startsWith("-")){ neg=!neg; t=t.slice(1); }
+  if(!/^[\d.,]+$/.test(t) || !/\d/.test(t)) return null;
+  const lc=t.lastIndexOf(","), ld=t.lastIndexOf(".");
+  if(lc>=0 && ld>=0){ t = lc>ld ? t.replace(/\./g,"").replace(",",".") : t.replace(/,/g,""); }
+  else if(lc>=0){ t = /,\d{3}$/.test(t) && (t.match(/,/g)||[]).length>1 ? t.replace(/,/g,"") : (/,\d{1,2}$/.test(t) ? t.replace(",",".") : t.replace(/,/g,"")); }
+  else if(ld>=0){ if((t.match(/\./g)||[]).length>1 || /\.\d{3}$/.test(t)) t=t.replace(/\./g,""); }
+  const v=parseFloat(t); if(!isFinite(v)) return null;
+  return neg?-v:v;
+}
+const num = x => { const v=toNum(x); return v==null?0:v; };
+const rowNums = row => row.map(toNum).filter(v=>v!=null);
+// etiqueta de tarifa: "19%", "19 %", "19,00 %", "IVA 19%", "Tarifa 5%"
+const TARIFA_RE = /^\s*(?:iva|tarifa)?\s*(19|5)(?:[.,]0+)?\s*%/i;
+const tarifaDe = c => { if(typeof c!=="string") return null; const m=c.match(TARIFA_RE); return m?m[1]:null; };
 
 /* Balance de Prueba: devuelve lookup por código de cuenta {deb,cre} */
 function parseBalance(rows){
@@ -806,13 +846,13 @@ function parseCompras(rows){
     if(joined.includes("totales por tarifas de iva") && joined.includes("descontable") && !joined.includes("no descontable")){ inDesc=true; continue; }
     if(joined.includes("no descontable")){ inDesc=false; }
     // buscar etiqueta de tarifa en la fila
-    const labCell=row.find(c=>typeof c==="string" && /^\s*(19|5|19,0|5,0)\s*%|^\s*exclu|^\s*exent/i.test(c.trim()));
+    const labCell=row.find(c=>tarifaDe(c) || (typeof c==="string" && /^\s*(exclu|exent)/i.test(c.trim())));
     if(!labCell) continue;
-    const nums=row.filter(c=>typeof c==="number");
+    const nums=rowNums(row.filter(c=>c!==labCell));
     const base=nums.length?nums[0]:0, iva=nums.length>1?nums[1]:0;
-    const L=labCell.trim().toLowerCase().replace(/\s/g,"");
-    if(L.startsWith("19")){ out.b19=base; out.i19=iva; }
-    else if(L.startsWith("5")){ out.b5=base; out.i5=iva; }
+    const t=tarifaDe(labCell), L=labCell.trim().toLowerCase();
+    if(t==="19"){ out.b19=base; out.i19=iva; }
+    else if(t==="5"){ out.b5=base; out.i5=iva; }
     else if(L.startsWith("exclu")){ out.bExcl=base; }
     else if(L.startsWith("exent")){ out.bExento=base; }
   }
@@ -841,13 +881,13 @@ function parseDocReport(rows){
     const joined=row.map(c=>String(c||"")).join(" ").toLowerCase();
     if(joined.includes("no descontable")) stop=true;
     if(stop) continue;
-    const lab=row.find(c=>typeof c==="string" && /^\s*(19|5)\s*%/.test(c.trim()));
+    const lab=row.find(c=>tarifaDe(c));
     if(!lab) continue;
-    const nums=row.filter(c=>typeof c==="number");
+    const nums=rowNums(row.filter(c=>c!==lab));
     const base=nums.length?nums[0]:0, iva=nums.length>1?nums[1]:0;
-    const L=lab.trim().replace(/\s/g,"");
-    if(L.startsWith("19")){ out.b19=base; out.i19=iva; }
-    else if(L.startsWith("5")){ out.b5=base; out.i5=iva; }
+    const t=tarifaDe(lab);
+    if(t==="19"){ out.b19=base; out.i19=iva; }
+    else if(t==="5"){ out.b5=base; out.i5=iva; }
   }
   return Object.assign(out,{periodo:findPeriodo(rows)});
 }
@@ -858,8 +898,19 @@ function parseDocReport(rows){
 function lastDay(y,m){ return new Date(y,m+1,0).getDate(); }
 
 function buildModel(V, DVV, C, DVC, bal){
-  const per = (bal&&bal.periodo) || (V&&V.periodo) || (C&&C.periodo) || (DVV&&DVV.periodo) || (DVC&&DVC.periodo);
+  let per = (bal&&bal.periodo) || (V&&V.periodo) || (C&&C.periodo) || (DVV&&DVV.periodo) || (DVC&&DVC.periodo);
   if(!per) throw new Error("No se pudo detectar el periodo (fecha) en los archivos.");
+  // Si el balance se generó a fin de mes pero los reportes (encabezado "Periodo") tienen un corte
+  // anterior en el mismo mes, el corte real es el menor: evita marcar como "mes completo" una fracción.
+  const warns=[];
+  const rp=[V,C,DVV,DVC].map(x=>x&&x.periodo).filter(x=>x&&x.src==="hdr"&&x.y2===per.y2&&x.mo2===per.mo2);
+  if(rp.length){
+    const minD2=Math.min(...rp.map(x=>x.d2));
+    if(minD2!==per.d2){
+      warns.push(`El balance llega al ${per.d2} pero los reportes al ${minD2}; se usa el corte ${minD2}.`);
+      if(minD2<per.d2) per=Object.assign({},per,{d2:minD2});
+    }
+  }
   const year=per.y2, mes=per.mo2;
   if(mes==null) throw new Error("No se reconoció el mes del periodo.");
   const completo = (per.d1===1 && per.d2===lastDay(year,mes) && per.mo1===per.mo2);
@@ -951,13 +1002,14 @@ function buildModel(V, DVV, C, DVC, bal){
   const corte = `${String(per.d2).padStart(2,"0")}/${abbr}/${year}`;
   const rango = `${String(per.d1).padStart(2,"0")}/${abbr}/${year} - ${String(per.d2).padStart(2,"0")}/${abbr}/${year}`;
 
+  const pad=n=>String(n).padStart(2,"0");
   return {
-    id:`${year}-${mes}-${tipo}`, year, mes, tipo, completo,
+    id: completo?`${year}-${mes}-completo`:`${year}-${mes}-f${pad(per.d1)}-${pad(per.d2)}`, year, mes, tipo, completo,
     mesNombre:MESES[mes], corte, rango, cutDate:per,
     ing, cmp, imp, totalIva, controlNeto, ajuste, prorrateoCalc,
     rete16:{deb:rete16.deb,cre:rete16.cre,mov:rete16.deb+rete16.cre},
     pagado20:{deb:pagado20.deb,cre:pagado20.cre},
-    val, savedAt:null
+    val, warns, savedAt:null
   };
 }
 
@@ -1008,9 +1060,10 @@ const DEF = {
 function monthData(){
   // devuelve array[12] de modelos consolidados por mes (o null)
   const byMonth = Array.from({length:12},()=>({completos:[],fracciones:[]}));
+  const yr=activeYear();
   for(const k in state.periods){
     const m=state.periods[k];
-    if(m.year!==2026 && Object.keys(state.periods).length) {/* permite otros años pero consolida por mes */}
+    if(m.year!==yr) continue;   // consolidar solo el año en curso (no mezclar octubre de dos años)
     (m.tipo==="completo"?byMonth[m.mes].completos:byMonth[m.mes].fracciones).push(m);
   }
   return byMonth.map(bucket=>{
@@ -1033,16 +1086,24 @@ function recomputeProrrateo(m){
 }
 function sumModels(list){
   if(list.length===1) return list[0];
+  list=list.slice().sort((a,b)=>fracRange(a)[0]-fracRange(b)[0]);
   const base=JSON.parse(JSON.stringify(list[0]));
   const addObj=(dst,src)=>{for(const kk in src){ if(typeof src[kk]==="number") dst[kk]=(dst[kk]||0)+src[kk]; }};
   for(let i=1;i<list.length;i++){
     addObj(base.ing,list[i].ing); addObj(base.cmp,list[i].cmp); addObj(base.imp,list[i].imp);
     base.totalIva+=list[i].totalIva; base.controlNeto+=list[i].controlNeto; base.ajuste+=list[i].ajuste;
-    base.rete16.mov+=list[i].rete16.mov;
+    base.rete16.mov+=list[i].rete16.mov; base.rete16.deb+=list[i].rete16.deb; base.rete16.cre+=list[i].rete16.cre;
+    if(base.val&&list[i].val){ base.val.v19=(base.val.v19||0)+(list[i].val.v19||0); base.val.v5=(base.val.v5||0)+(list[i].val.v5||0); }
   }
-  base.tipo="fraccion"; base.completo=false; base.rango="varias fracciones";
-  // corte = el mayor
-  base.corte=list.map(x=>x.corte).sort().pop();
+  // rango real (primer día – último día) y días efectivamente cubiertos, para que la proyección cuente bien
+  const rs=list.map(fracRange), abbr=MESES[base.mes].slice(0,3).toLowerCase(), pad=n=>String(n).padStart(2,"0");
+  const d1=Math.min(...rs.map(r=>r[0])), d2=Math.max(...rs.map(r=>r[1]));
+  base.tipo="fraccion"; base.completo=false; base.multiFrac=list.length;
+  base.rango=`${pad(d1)}/${abbr}/${base.year} - ${pad(d2)}/${abbr}/${base.year}`;
+  base.cutDate={d1,d2};
+  base.diasCubiertos=rs.reduce((t,r)=>t+(r[1]-r[0]+1),0);
+  base.corte=list.map(x=>x.corte).sort((a,b)=>corteKey(a)-corteKey(b)).pop();
+  base.id=`${base.year}-${base.mes}-suma`;
   return base;
 }
 
@@ -1195,6 +1256,7 @@ function chartDatasets(mdSlice){
 function chartOpts(){ const cs=getComputedStyle(document.documentElement);const ink=cs.getPropertyValue('--ink-soft').trim();const grid=cs.getPropertyValue('--line').trim();
   return {responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:ink,font:{family:"Inter",size:11},boxWidth:12,boxHeight:12}}},scales:{x:{ticks:{color:ink,font:{size:10}},grid:{display:false}},y:{ticks:{color:ink,font:{size:10},callback:v=>fmt0.format(v)},grid:{color:grid}}}}; }
 function drawChartPair(prefix,vcId,ivaId,mdSlice,labels){
+  if(typeof Chart==="undefined") return;   // sin conexión: se omiten los gráficos, el resto funciona
   const d=chartDatasets(mdSlice), kVC=prefix+"vc", kIVA=prefix+"iva";
   if(charts[kVC])charts[kVC].destroy();
   charts[kVC]=new Chart(document.getElementById(vcId),{type:"bar",data:{labels,datasets:[{label:"Ventas",data:d.ventas,backgroundColor:"#9bd4b4",borderRadius:5},{label:"Compras",data:d.compras,backgroundColor:"#bda9ec",borderRadius:5}]},options:chartOpts()});
@@ -1203,6 +1265,7 @@ function drawChartPair(prefix,vcId,ivaId,mdSlice,labels){
 }
 
 function renderAnio(){
+  const ay=document.getElementById("anioYear"); if(ay) ay.textContent=activeYear();
   const md=monthData();
   const any=md.some(x=>x);
   document.getElementById("anioEmpty").hidden=any;
@@ -1356,7 +1419,7 @@ function renderObs(){
 function noteKey(){
   const md=monthData();
   if(uiObsMes!==null && md[uiObsMes]) return `mes:${md[uiObsMes].year}-${uiObsMes}`;
-  return `cuat:2026-${uiObsCuat}`;
+  return `cuat:${activeYear()}-${uiObsCuat}`;
 }
 function buildAlerts(m,proy,bmin,bmax){
   const mn=`${m.mesNombre.slice(0,1)+m.mesNombre.slice(1).toLowerCase()} ${m.year}`;
@@ -1402,18 +1465,20 @@ function alertHTML(type,title,body){
 /* ===========================================================
    EVENTOS / UI
    =========================================================== */
-function toast(msg,kind){ const t=document.getElementById("toast"); t.textContent=msg; t.className="toast on "+(kind||""); setTimeout(()=>t.className="toast",2600); }
+let toastTimer=null;
+function toast(msg,kind){ const t=document.getElementById("toast"); t.textContent=msg; t.className="toast on "+(kind||""); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.className="toast",Math.min(9000,2600+String(msg).length*30)); }
 
 // proyección (funciones)
 function proyDays(m){
   const mm=String(m.rango||"").match(/(\d+)\s*\/\s*\w+\s*\/\s*\d+\s*-\s*(\d+)/);
   const d2=mm?+mm[2]:lastDay(m.year,m.mes), d1=mm?+mm[1]:1;
   const total=lastDay(m.year,m.mes);
-  const elapsed=Math.max(1,d2-d1+1), remaining=Math.max(0,total-d2);
+  const elapsed=Math.max(1,m.diasCubiertos||(d2-d1+1));
+  const remaining=m.completo?0:Math.max(0,total-elapsed);
   return {d1,d2,total,elapsed,remaining};
 }
 function getProyO(mi){
-  const key=`2026-${mi}`; let o=state.proy[key];
+  const key=`${activeYear()}-${mi}`; let o=state.proy[key];
   if(!o||typeof o!=="object") o={};
   if(typeof o.fV!=="number")o.fV=0; if(typeof o.fC!=="number")o.fC=0;
   if(!o.f||typeof o.f!=="object") o.f={};
@@ -1471,6 +1536,38 @@ function applyProyDynamic(P,o){
   const pfv=document.getElementById("pfVal"); pfv.textContent=money(lvl); pfv.style.color=col;
   document.getElementById("pfSub").textContent=lvl<=0?'A favor':lvl<=proyObj?'En objetivo':lvl<=proyObj*1.5?'Cerca del límite':'Por encima';
   const pfb=document.getElementById("pfBar"); pfb.style.width=pct+'%'; pfb.style.background=col;
+  drawProyChart(P);
+}
+// gráfico: IVA neto real por mes (barras) + restante proyectado del mes (barra punteada apilada) + objetivo (línea)
+let proyChartP=null;
+function drawProyChart(P){
+  if(typeof Chart==="undefined") return;
+  proyChartP=P;
+  const md=monthData(), idx=[];
+  for(let i=0;i<12;i++) if(md[i]) idx.push(i);
+  const labels=idx.map(i=>MESES[i].slice(0,1)+MESES[i].slice(1,3).toLowerCase());
+  const real=idx.map(i=>i===uiProyMes?Math.round(P.realTotal):Math.round(md[i].totalIva));
+  // restante como barra flotante [real, total proyectado] sobre la barra real del mes
+  const rest=idx.map(i=>i===uiProyMes?[Math.round(P.realTotal),Math.round(P.totalProy)]:null);
+  const obj=idx.map(()=>cfg.proy);
+  const t=document.getElementById("proyChartTitle");
+  if(t) t.textContent=`IVA neto por mes ${activeYear()} · ${MESES[uiProyMes].slice(0,1)+MESES[uiProyMes].slice(1).toLowerCase()} proyectado ${money(P.totalProy)}`;
+  const c=charts.proy;
+  if(c && c.canvas===document.getElementById("proyChart")){
+    c.data.labels=labels; c.data.datasets[0].data=real; c.data.datasets[1].data=rest; c.data.datasets[2].data=obj; c.update("none"); return;
+  }
+  if(c) c.destroy();
+  const o=chartOpts();
+  o.interaction={mode:"index",intersect:false};
+  o.plugins.legend.reverse=true;
+  o.plugins.tooltip={callbacks:{label:ctx=>{ const r=ctx.raw; if(r==null) return null;
+      return Array.isArray(r)?`${ctx.dataset.label}: ${fmt0.format(r[1]-r[0])}`:`${ctx.dataset.label}: ${fmt0.format(r)}`; },
+    footer:items=>{ const i=items[0].dataIndex; if(items[0].chart.data.labels[i]!==MESES[uiProyMes].slice(0,1)+MESES[uiProyMes].slice(1,3).toLowerCase()) return ""; return "Total mes proyectado: "+fmt0.format(Math.round(proyChartP.totalProy)); }}};
+  charts.proy=new Chart(document.getElementById("proyChart"),{type:"bar",data:{labels,datasets:[
+    {label:"IVA neto real",data:real,backgroundColor:"#9bd4b4",borderRadius:5,grouped:false,order:2},
+    {label:"Proyectado restante",data:rest,backgroundColor:"rgba(122,99,201,.20)",borderColor:"#7a63c9",borderWidth:2,borderRadius:5,borderSkipped:false,grouped:false,order:1},
+    {type:"line",label:"Objetivo mensual",data:obj,borderColor:"#d1495b",borderWidth:2,borderDash:[6,4],pointRadius:0,order:0}
+  ]},options:o});
 }
 function patchProy(){
   const m=monthData()[uiProyMes]; if(!m) return;
@@ -1493,6 +1590,7 @@ function patchProy(){
   const fct=document.getElementById('fcTxt'); if(fct)fct.textContent=(o.fC>0?'+':'')+o.fC+'%';
   applyProyDynamic(P,o);
 }
+const PLBL={v19:"ventas 19%",v5:"ventas 5%",v0:"ventas excluidas",c19:"compras 19%",c5:"compras 5%",c0:"compras excluidas"};
 function renderProy(){
   const md=monthData(); const any=md.some(x=>x);
   document.getElementById("proyEmpty").hidden=any;
@@ -1504,14 +1602,17 @@ function renderProy(){
   let opts=""; for(let i=0;i<12;i++){ if(md[i]){ const dd=proyDays(md[i]); opts+=`<option value="${i}">${MESES[i].slice(0,1)+MESES[i].slice(1).toLowerCase()} ${dd.remaining>0?'(parcial)':'(completo)'}</option>`; } }
   sel.innerHTML=opts; sel.value=String(uiProyMes);
   const m=md[uiProyMes], o=getProyO(uiProyMes), P=computeProy(m,o);
+  document.getElementById("proyPending").innerHTML = pendingModel
+    ? alertHTML("warn","Hay un periodo cargado sin grabar",`${esc(pendingModel.mesNombre.slice(0,1)+pendingModel.mesNombre.slice(1).toLowerCase())} ${pendingModel.year} (${esc(pendingModel.rango)}) aún no se usa en la proyección. Pulsa <b>Grabar datos</b> para incluirlo.`)
+    : (P.dd.remaining===0 ? alertHTML("ok","Mes completo",`${MESES[uiProyMes].slice(0,1)+MESES[uiProyMes].slice(1).toLowerCase()} está completo: no hay días por proyectar y el total corresponde al real. Elige un mes parcial para proyectar.`) : "");
   document.getElementById("proyDays").innerHTML=`Días transcurridos <b>${P.dd.elapsed}</b> · restantes <b>${P.dd.remaining}</b> · mes <b>${P.dd.total}</b> · base <b>${Math.round((P.dd.elapsed?P.dd.remaining/P.dd.elapsed:0)*100)}%</b>`;
   const fvS=document.getElementById("fvSlider"),fcS=document.getElementById("fcSlider");
   if(fvS&&document.activeElement!==fvS)fvS.value=o.fV;
   if(fcS&&document.activeElement!==fcS)fcS.value=o.fC;
   const numCell=(v,id)=>`<td class="num${v<0?' neg':''}${(v===0||v==null)?' z':''}"${id?` id="${id}"`:''}>${fmtCellTxt(v)}</td>`;
-  const slInp=(key,side)=>`<td class="pedit"><span class="pfac-wrap ${side}"><input type="range" class="pfac" data-pf="${key}" min="-50" max="150" step="1" value="${o.f[key]||0}"><b class="pfac-v" id="pfv-${key}">${(o.f[key]||0)>0?'+':''}${o.f[key]||0}%</b></span></td>`;
-  const remInp=(key,val)=>`<td class="pedit"><input class="pcell" data-pb="${key}" id="pcell-${key}" value="${fmt0.format(Math.round(val))}" inputmode="numeric"></td>`;
-  let hh=`<thead><tr><th>Concepto</th><th>Real (${P.dd.d1}–${P.dd.d2})</th><th>Variación (mouse)</th><th>Proyectado restante ✏</th><th>Total mes proyectado</th></tr></thead><tbody>`;
+  const slInp=(key,side)=>`<td class="pedit"><span class="pfac-wrap ${side}"><input type="range" class="pfac" data-pf="${key}" min="-50" max="150" step="1" value="${o.f[key]||0}" aria-label="Variación % ${PLBL[key]}"><b class="pfac-v" id="pfv-${key}">${(o.f[key]||0)>0?'+':''}${o.f[key]||0}%</b></span></td>`;
+  const remInp=(key,val)=>`<td class="pedit"><input class="pcell${o.ov&&o.ov[key]!=null?' manual':''}" data-pb="${key}" id="pcell-${key}" value="${fmt0.format(Math.round(val))}" inputmode="numeric" aria-label="Proyectado restante ${PLBL[key]}" title="${o.ov&&o.ov[key]!=null?'Valor manual (Reset para volver al cálculo)':'Valor calculado; puedes escribir uno manual'}"></td>`;
+  let hh=`<thead><tr><th>Concepto</th><th>Real (${P.dd.d1}–${P.dd.d2})</th><th>Variación %</th><th>Proyectado restante <svg class="f-ic sm" viewBox="0 0 24 24" fill="none" aria-label="editable"><path d="M4 20h4L19 9l-4-4L4 16v4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></th><th>Total mes proyectado</th></tr></thead><tbody>`;
   hh+=`<tr class="grp ing"><td>VENTAS (bases)</td><td></td><td></td><td></td><td></td></tr>`;
   const vlab=["Ventas Gravadas 19%","Ventas Gravadas 5%","Ventas Excluidas 0%"], vk=["v19","v5","v0"];
   [0,1,2].forEach(i=>{ hh+=`<tr><td>${vlab[i]}</td>${numCell(P.realV[i])}${slInp(vk[i],'v')}${remInp(vk[i],P.vr[i])}${numCell(P.vt[i],'ptot-'+vk[i])}</tr>`; });
@@ -1535,6 +1636,7 @@ document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
   for(const k in map) document.getElementById(map[k]).hidden = (map[k]!==map[t.dataset.tab]);
   const pf=document.getElementById("proyFloat"); if(pf) pf.hidden=(t.dataset.tab!=="proy");
   if(t.dataset.tab==="cons"){ setTimeout(()=>{charts.cvc&&charts.cvc.resize();charts.civa&&charts.civa.resize();},30); }
+  if(t.dataset.tab==="proy"){ setTimeout(()=>{charts.proy&&charts.proy.resize();},30); }
   if(t.dataset.tab==="anio"){ setTimeout(()=>{charts.yvc&&charts.yvc.resize();charts.yiva&&charts.yiva.resize();},30); }
 }));
 function goTab(name){ document.querySelector(`.tab[data-tab="${name}"]`).click(); }
@@ -1550,7 +1652,7 @@ document.getElementById("fvSlider").addEventListener("input",e=>{ const v=Math.r
 document.getElementById("fcSlider").addEventListener("input",e=>{ const v=Math.round(+e.target.value)||0; const o=getProyO(uiProyMes); o.fC=v; ['c19','c5','c0'].forEach(k=>{o.f[k]=v;delete o.ov[k];}); saveStore(); patchProy(); });
 document.getElementById("proyTable").addEventListener("input",e=>{ const sl=e.target.closest("input.pfac"); if(!sl)return; const o=getProyO(uiProyMes); const k=sl.dataset.pf; o.f[k]=Math.round(+sl.value)||0; delete o.ov[k]; saveStore(); patchProy(); });
 document.getElementById("proyTable").addEventListener("change",e=>{ const base=e.target.closest("input.pcell"); if(!base)return; const o=getProyO(uiProyMes); o.ov[base.dataset.pb]=Math.round(parseMoney(base.value)); saveStore(); renderProy(); });
-document.getElementById("proyReset").onclick=()=>{ state.proy[`2026-${uiProyMes}`]={fV:0,fC:0,f:{v19:0,v5:0,v0:0,c19:0,c5:0,c0:0},ov:{}}; saveStore(); renderProy(); toast("Proyección reiniciada","ok"); };
+document.getElementById("proyReset").onclick=()=>{ state.proy[`${activeYear()}-${uiProyMes}`]={fV:0,fC:0,f:{v19:0,v5:0,v0:0,c19:0,c5:0,c0:0},ov:{}}; saveStore(); renderProy(); toast("Proyección reiniciada","ok"); };
 document.getElementById("obsNotes").addEventListener("input",e=>{ state.notes[noteKey()]=e.target.value; saveStore(); });
 // prorrateo: IVA común automático del balance, con ajuste manual opcional
 function applyPror(comunIVA, manual){
@@ -1615,11 +1717,12 @@ document.getElementById("mProcess").onclick=async()=>{
     scrim.classList.remove("on");
     render();
     goTab("mes");
-    const dup = state.periods[model.id];
+    const dup = state.periods[model.id] || conflictosFraccion(model).length;
     const cuadra = Math.abs(model.ajuste)<1;
-    toast(`Periodo ${model.mesNombre.slice(0,3)} ${model.year} (${model.tipo}) cargado${cuadra?' y cuadrado con el balance':' — revisa el cuadre'}. ${dup?'Reemplaza el guardado al grabar.':'Revisa y pulsa Grabar.'}`, cuadra?"ok":"bad");
+    const aviso = (model.warns&&model.warns.length)?" Atención: "+model.warns.join(" "):"";
+    toast(`Periodo ${model.mesNombre.slice(0,3)} ${model.year} (${model.tipo} ${model.rango}) cargado${cuadra?' y cuadrado con el balance':' — revisa el cuadre'}. ${dup?'Reemplaza lo guardado al grabar.':'Pulsa «Grabar datos» para usarlo en Proyección y Consolidado.'}${aviso}`, (cuadra&&!aviso)?"ok":"bad");
   }catch(ex){
-    err.textContent="⚠ "+ex.message; err.classList.add("on");
+    err.textContent=ex.message; err.classList.add("on");
   }
 };
 
@@ -1627,6 +1730,7 @@ document.getElementById("mProcess").onclick=async()=>{
 document.getElementById("btnSave").onclick=()=>{
   if(!pendingModel){ toast("Primero carga un periodo","bad"); return; }
   const m=pendingModel;
+  const nm=m.mesNombre.slice(0,1)+m.mesNombre.slice(1).toLowerCase();
   // si guardas un completo y existen fracciones del mismo mes, avisar
   const fracs=Object.keys(state.periods).filter(k=>{const p=state.periods[k];return p.mes===m.mes&&p.year===m.year&&p.tipo==="fraccion";});
   if(m.tipo==="completo" && fracs.length){
@@ -1634,13 +1738,35 @@ document.getElementById("btnSave").onclick=()=>{
       fracs.forEach(k=>delete state.periods[k]);
     }
   }
+  if(m.tipo==="fraccion"){
+    // ya existe el mes completo: la fracción no se usaría
+    if(state.periods[`${m.year}-${m.mes}-completo`] && !confirm(`${nm} ${m.year} ya está grabado como mes completo, que tiene prioridad sobre las fracciones. ¿Grabar la fracción de todos modos?`)) return;
+    // fracciones que se cruzan en días (p. ej. 1–15 y luego 1–26): la nueva reemplaza a la anterior.
+    // Las fracciones contiguas (1–15 y 16–26) se conservan y se suman.
+    const solapes=conflictosFraccion(m);
+    if(solapes.length){
+      const txt=solapes.map(k=>{const r=fracRange(state.periods[k]);return `${r[0]}–${r[1]}`;}).join(", ");
+      if(!confirm(`La fracción ${m.rango} se cruza con la(s) ya grabada(s) de ${nm}: ${txt}. ¿Reemplazarla(s) por la nueva?`)) return;
+      solapes.forEach(k=>delete state.periods[k]);
+    }
+  }
   m.savedAt=new Date().toISOString();
   state.periods[m.id]=m;
   saveStore(); pendingModel=null;
+  uiProyMes=null;   // que la proyección vuelva a escoger el mes parcial más reciente
   render();
   toast(`Guardado: ${m.mesNombre.slice(0,1)+m.mesNombre.slice(1).toLowerCase()} ${m.year} (${m.tipo})`,"ok");
 };
 
+function conflictosFraccion(m){
+  if(m.tipo!=="fraccion") return [];
+  const r=fracRange(m);
+  return Object.keys(state.periods).filter(k=>{
+    const p=state.periods[k];
+    if(k===m.id || p.year!==m.year || p.mes!==m.mes || p.tipo!=="fraccion") return false;
+    const q=fracRange(p); return q[0]<=r[1] && r[0]<=q[1];
+  });
+}
 // eliminar (desde toolbar => elige)
 // tarjetas de meses: ver / eliminar
 document.getElementById("mesCards").addEventListener("click",e=>{
@@ -1746,6 +1872,7 @@ document.getElementById("btnPdf").onclick=()=>{
 };
 
 function buildPDF(target){
+  if(!window.jspdf){ toast("No se pudo cargar el generador de PDF (requiere conexión a internet)","bad"); return; }
   const {jsPDF}=window.jspdf;
   const md=monthData();
   const ink=[43,51,80],soft=[90,99,132],mint=[69,177,132],peach=[223,138,94],rose=[200,86,106],sky=[79,147,216],lav=[122,99,201],ok=[46,157,102];
@@ -1888,7 +2015,7 @@ function buildPDF(target){
     });
     y+=5;
   });
-  const note=(uiObsMes!==null && md[uiObsMes])?(state.notes[`mes:${md[uiObsMes].year}-${uiObsMes}`]||""):(state.notes[`cuat:2026-${oc}`]||"");
+  const note=(uiObsMes!==null && md[uiObsMes])?(state.notes[`mes:${md[uiObsMes].year}-${uiObsMes}`]||""):(state.notes[`cuat:${activeYear()}-${oc}`]||"");
   if(note && note.trim()){
     if(y>700){doc.addPage("a4","portrait");y=50;}
     y+=8;doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(...ink);doc.text("Observaciones del contador",34,y);y+=6;
