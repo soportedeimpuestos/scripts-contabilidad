@@ -1,0 +1,1927 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Control de IVA · La Nota Musical</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Librerías (cdnjs) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+:root{
+  color-scheme: light;
+  --bg:        #f3f5fb;
+  --surface:   #ffffff;
+  --surface-2: #fbfcff;
+  --ink:       #2b3350;
+  --ink-soft:  #5a6384;
+  --ink-faint: #8b93b0;
+  --line:      #e7eaf4;
+
+  /* pasteles */
+  --mint:   #dff3e8;  --mint-ink:#2f9d6e;  --mint-deep:#45b184;
+  --lav:    #e9e2fb;  --lav-ink: #7a63c9;
+  --peach:  #fce4d6;  --peach-ink:#df8a5e;
+  --sky:    #dcebfc;  --sky-ink: #4f93d8;
+  --butter: #fcefcf;  --butter-ink:#c99a1f;
+  --rose:   #fbe0e2;  --rose-ink:#cf6373;
+
+  --ok-bg:#e4f5ea;  --ok-ink:#2e9d66;
+  --warn-bg:#fdf0d2; --warn-ink:#b9881a;
+  --bad-bg:#fbe0e2;  --bad-ink:#c8566a;
+
+  --radius:16px; --radius-sm:11px;
+  --shadow: 0 1px 2px rgba(43,51,80,.05), 0 8px 24px -14px rgba(43,51,80,.18);
+  --font-ui:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  --font-dis:"Bricolage Grotesque","Inter",system-ui,sans-serif;
+  --safe-t: env(safe-area-inset-top,0px);
+  --safe-b: env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#171a26; --surface:#1f2334; --surface-2:#242941; --ink:#e9ecf7; --ink-soft:#aab2d0;
+    --ink-faint:#7b83a4; --line:#2e3450;
+    --mint:#213b31;--mint-ink:#6ad3a1;--mint-deep:#6ad3a1;--lav:#2e2a49;--lav-ink:#b6a4f2;
+    --peach:#3d2c23;--peach-ink:#efa983;--sky:#1f3350;--sky-ink:#8fc0f2;
+    --butter:#3b331c;--butter-ink:#e6c86b;--rose:#3d262b;--rose-ink:#ef9aa8;
+    --ok-bg:#21402f;--ok-ink:#7ddca9;--warn-bg:#3c3519;--warn-ink:#e6c86b;--bad-bg:#3e262c;--bad-ink:#ef98a6;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -16px rgba(0,0,0,.6);
+  }
+}
+*{box-sizing:border-box}
+html{scroll-padding-top: var(--safe-t)}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--font-ui);
+  font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  padding: calc(var(--safe-t)) 0 calc(28px + var(--safe-b));
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:var(--safe-t);background:var(--surface);z-index:60}
+.num{font-variant-numeric: tabular-nums; font-feature-settings:"tnum" 1}
+
+/* ---------- layout ---------- */
+.wrap{max-width:1240px;margin:0 auto;padding:0 18px}
+header.app{
+  position:sticky; top:var(--safe-t); z-index:50;
+  background:color-mix(in srgb, var(--surface) 90%, transparent);
+  backdrop-filter:saturate(1.3) blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.app-row{display:flex;align-items:center;gap:16px;padding:14px 0;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:13px;min-width:0}
+.logo{
+  width:46px;height:46px;border-radius:13px;flex:none;display:grid;place-items:center;
+  background:linear-gradient(145deg,var(--mint),var(--sky));
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.5);
+}
+.logo svg{width:26px;height:26px}
+.brand h1{font-family:var(--font-dis);font-weight:700;font-size:19px;margin:0;letter-spacing:-.01em;line-height:1.1}
+.brand p{margin:1px 0 0;color:var(--ink-soft);font-size:12.5px}
+.corte{
+  margin-left:auto;display:flex;align-items:center;gap:9px;background:var(--butter);
+  color:var(--butter-ink);border-radius:999px;padding:7px 15px;font-weight:600;font-size:13px;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--butter-ink) 22%,transparent);
+}
+.corte b{font-weight:700}
+.corte svg{width:16px;height:16px}
+
+/* ---------- toolbar ---------- */
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;padding:16px 0 4px}
+.btn{
+  --c:var(--mint); --ci:var(--mint-ink);
+  border:none;cursor:pointer;font-family:var(--font-ui);font-weight:600;font-size:13.5px;
+  color:var(--ci); background:var(--c);
+  padding:11px 17px;border-radius:12px;display:inline-flex;align-items:center;gap:9px;
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ci) 20%,transparent), 0 2px 6px -3px color-mix(in srgb,var(--ci) 60%,transparent);
+  transition:transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+.btn:hover{filter:brightness(1.03);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ci) 30%,transparent),0 6px 16px -6px color-mix(in srgb,var(--ci) 70%,transparent)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;filter:grayscale(.3)}
+.btn svg{width:17px;height:17px}
+.btn.load{--c:var(--sky);--ci:var(--sky-ink)}
+.btn.save{--c:var(--mint);--ci:var(--mint-ink)}
+.btn.del{--c:var(--rose);--ci:var(--rose-ink)}
+.btn.pdf{--c:var(--peach);--ci:var(--peach-ink)}
+.btn.ghost{--c:transparent;--ci:var(--ink-soft);box-shadow:inset 0 0 0 1px var(--line)}
+.btn.sm{padding:7px 12px;font-size:12.5px;border-radius:9px}
+
+/* ---------- tabs (hojas) ---------- */
+.tabs{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 0}
+.tab{
+  --c:var(--lav);--ci:var(--lav-ink);
+  cursor:pointer;border:none;font-family:var(--font-dis);font-weight:600;font-size:14.5px;
+  color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);
+  padding:12px 18px;border-radius:14px 14px 6px 6px;display:inline-flex;align-items:center;gap:10px;
+  transition:all .14s ease;position:relative;top:1px;
+}
+.tab .dot{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.tab[aria-selected="true"]{
+  color:var(--ci);background:var(--c);border-color:transparent;
+  box-shadow:0 -2px 0 0 var(--ci) inset;
+}
+.tab[aria-selected="true"] .dot{background:var(--ci)}
+.tab.h1{--c:var(--sky);--ci:var(--sky-ink)}
+.tab.h2{--c:var(--mint);--ci:var(--mint-ink)}
+.tab.h3{--c:var(--peach);--ci:var(--peach-ink)}
+.tab.h4{--c:var(--butter);--ci:var(--butter-ink)}
+
+.panel{
+  background:var(--surface);border:1px solid var(--line);border-radius:4px 16px 16px 16px;
+  box-shadow:var(--shadow);padding:22px;margin-top:0;
+}
+.panel[hidden]{display:none}
+
+/* ---------- generic ---------- */
+h2.sec{font-family:var(--font-dis);font-weight:700;font-size:16px;margin:2px 0 14px;letter-spacing:-.01em;
+  display:flex;align-items:center;gap:10px}
+h2.sec .pill{font-family:var(--font-ui);font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--surface-2);color:var(--ink-soft);border:1px solid var(--line)}
+.muted{color:var(--ink-soft)}
+.faint{color:var(--ink-faint)}
+.empty{
+  text-align:center;padding:46px 20px;color:var(--ink-soft);
+  border:2px dashed var(--line);border-radius:var(--radius);background:var(--surface-2);
+}
+.empty svg{width:40px;height:40px;opacity:.6;margin-bottom:10px}
+.empty h3{font-family:var(--font-dis);color:var(--ink);margin:0 0 6px;font-size:16px}
+
+/* cards de totales */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px 15px}
+.kpi .lab{font-size:11.5px;color:var(--ink-soft);font-weight:600;letter-spacing:.01em;margin-bottom:6px;display:flex;align-items:center;gap:7px}
+.kpi .val{font-family:var(--font-dis);font-weight:700;font-size:21px;letter-spacing:-.02em}
+.kpi .sub{font-size:11.5px;color:var(--ink-faint);margin-top:3px}
+.kpi.accent{background:var(--mint)}
+.kpi.accent .lab,.kpi.accent .val{color:var(--mint-ink)}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:600}
+.chip.c{background:var(--mint);color:var(--mint-ink)} .chip.f{background:var(--butter);color:var(--butter-ink)}
+
+/* tabla reporte */
+.tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius-sm)}
+table.rep{border-collapse:collapse;width:100%;font-size:13px;min-width:520px}
+table.rep th,table.rep td{padding:8px 11px;text-align:right;white-space:nowrap}
+table.rep th:first-child,table.rep td:first-child{text-align:left;white-space:normal;min-width:230px;position:sticky;left:0;background:var(--surface)}
+table.rep thead th{background:var(--surface-2);color:var(--ink-soft);font-weight:600;font-size:11.5px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1}
+table.rep thead th:first-child{z-index:2}
+table.rep tbody td{border-bottom:1px solid var(--line)}
+table.rep tr.grp td{background:var(--surface-2);font-family:var(--font-dis);font-weight:700;color:var(--ink);font-size:12.5px;text-transform:none;letter-spacing:.01em}
+table.rep tr.grp.ing td{background:var(--sky);color:var(--sky-ink)}
+table.rep tr.grp.com td{background:var(--lav);color:var(--lav-ink)}
+table.rep tr.grp.imp td{background:var(--peach);color:var(--peach-ink)}
+table.rep tr.total td{font-weight:700;background:color-mix(in srgb,var(--mint) 55%,var(--surface));border-top:2px solid var(--mint-ink)}
+table.rep tr.total td:first-child{background:color-mix(in srgb,var(--mint) 55%,var(--surface))}
+table.rep tr.grand td{font-family:var(--font-dis);font-weight:800;font-size:14px;background:var(--mint-ink);color:#fff;border:none}
+table.rep tr.grand td:first-child{background:var(--mint-ink);color:#fff}
+.neg{color:var(--rose-ink)}
+.cuat{background:color-mix(in srgb,var(--butter) 40%,var(--surface))!important}
+td.z{color:var(--ink-faint)}
+
+/* charts */
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px}
+@media(max-width:820px){.charts{grid-template-columns:1fr}}
+.chartbox{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px}
+.chartbox h3{font-family:var(--font-dis);font-size:13.5px;margin:0 0 10px;font-weight:600}
+.chartbox .cv{position:relative;height:260px}
+
+/* periodos guardados */
+.saved{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.saved-row{display:flex;align-items:center;gap:12px;padding:11px 14px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2)}
+.saved-row.active{border-color:var(--mint-ink);box-shadow:inset 0 0 0 1px var(--mint-ink)}
+.saved-row .mo{font-family:var(--font-dis);font-weight:700;min-width:118px}
+.saved-row .meta{color:var(--ink-soft);font-size:12px;flex:1;min-width:0}
+.saved-row .tot{font-variant-numeric:tabular-nums;font-weight:700}
+.saved-row .acts{display:flex;gap:6px}
+
+/* observaciones */
+.alert{display:flex;gap:13px;padding:14px 16px;border-radius:var(--radius-sm);margin-bottom:11px;align-items:flex-start;border:1px solid transparent}
+.alert .ic{width:34px;height:34px;border-radius:9px;flex:none;display:grid;place-items:center}
+.alert .ic svg{width:19px;height:19px}
+.alert h4{margin:0 0 3px;font-size:13.5px;font-weight:700;font-family:var(--font-dis)}
+.alert>div{flex:1;min-width:0}
+.alert h4,.alert p{text-align:left}
+.alert p{margin:0;font-size:13px;color:var(--ink-soft);line-height:1.45;overflow-wrap:anywhere}
+.alert p b{color:var(--ink)}
+.alert.ok{background:var(--ok-bg)} .alert.ok .ic{background:color-mix(in srgb,var(--ok-ink) 18%,transparent);color:var(--ok-ink)} .alert.ok h4{color:var(--ok-ink)}
+.alert.warn{background:var(--warn-bg)} .alert.warn .ic{background:color-mix(in srgb,var(--warn-ink) 18%,transparent);color:var(--warn-ink)} .alert.warn h4{color:var(--warn-ink)}
+.alert.bad{background:var(--bad-bg)} .alert.bad .ic{background:color-mix(in srgb,var(--bad-ink) 18%,transparent);color:var(--bad-ink)} .alert.bad h4{color:var(--bad-ink)}
+
+.cfg{display:flex;gap:16px;flex-wrap:wrap;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:18px}
+.cfg label{font-size:12px;font-weight:600;color:var(--ink-soft);display:flex;flex-direction:column;gap:5px}
+.cfg input{font-family:var(--font-ui);font-size:13.5px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);width:150px;font-variant-numeric:tabular-nums}
+.cfg input:focus{outline:2px solid var(--mint-ink);outline-offset:1px}
+
+/* modal cargue */
+.scrim{position:fixed;inset:0;background:rgba(30,34,52,.5);backdrop-filter:blur(3px);z-index:100;display:none;align-items:center;justify-content:center;padding:18px}
+.scrim.on{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius);box-shadow:0 30px 70px -20px rgba(0,0,0,.4);max-width:560px;width:100%;padding:24px;max-height:90vh;overflow:auto}
+.modal h3{font-family:var(--font-dis);margin:0 0 4px;font-size:18px}
+.modal .lead{color:var(--ink-soft);font-size:13px;margin:0 0 18px}
+.drop{border:2px dashed var(--line);border-radius:var(--radius-sm);padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:13px;cursor:pointer;transition:all .14s}
+.drop:hover,.drop.has{border-color:var(--mint-ink);background:var(--mint)}
+.drop .ic{width:40px;height:40px;border-radius:10px;background:var(--sky);color:var(--sky-ink);display:grid;place-items:center;flex:none}
+.drop.has .ic{background:var(--mint-ink);color:#fff}
+.drop .ic svg{width:21px;height:21px}
+.drop .txt b{display:block;font-size:13.5px}
+.drop .txt span{font-size:12px;color:var(--ink-soft)}
+.drop input{display:none}
+.modal-acts{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+.perr{background:var(--bad-bg);color:var(--bad-ink);border-radius:9px;padding:10px 13px;font-size:12.5px;margin-top:4px;display:none}
+.perr.on{display:block}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:0 12px 30px -10px rgba(0,0,0,.5);z-index:120;opacity:0;transition:all .25s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--mint-ink)} .toast.bad{background:var(--bad-ink)}
+
+.foot{text-align:center;color:var(--ink-faint);font-size:11.5px;margin-top:26px}
+.legend-row{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft);margin:10px 2px 0}
+.legend-row span{display:inline-flex;align-items:center;gap:6px}
+.legend-row i{width:11px;height:11px;border-radius:3px;display:inline-block}
+@media(max-width:560px){
+  .brand h1{font-size:17px}.corte{margin-left:0;width:100%;justify-content:center}
+  .panel{padding:16px}.kpi .val{font-size:18px}
+}
+
+/* ---- control segmentado (cuatrimestre) ---- */
+.seg{display:inline-flex;gap:6px;background:var(--surface-2);border:1px solid var(--line);border-radius:13px;padding:5px;margin:0 0 16px;flex-wrap:wrap}
+.seg-btn{cursor:pointer;border:none;background:transparent;color:var(--ink-soft);font-family:var(--font-ui);font-weight:600;font-size:13px;padding:8px 16px;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:2px;line-height:1.15;transition:all .13s}
+.seg-btn small{font-weight:500;font-size:10px;opacity:.8}
+.seg-btn:hover{color:var(--ink)}
+.seg-btn[aria-selected="true"]{background:var(--butter);color:var(--butter-ink);box-shadow:0 1px 5px -2px var(--butter-ink)}
+.seg.sm{margin-bottom:0}
+.seg.sm .seg-btn{padding:8px 15px;font-size:12.5px}
+.obs-controls{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap;margin-bottom:8px}
+.obs-mes{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;color:var(--ink-soft)}
+.obs-mes select{font-family:var(--font-ui);font-size:13.5px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);min-width:190px}
+.obs-mes select:focus{outline:2px solid var(--peach-ink);outline-offset:1px}
+/* ---- fecha de corte editable ---- */
+.corte-input{font-family:var(--font-ui);font-weight:700;font-size:13px;color:var(--butter-ink);background:rgba(255,255,255,.55);border:1px solid color-mix(in srgb,var(--butter-ink) 32%,transparent);border-radius:7px;padding:3px 9px;width:120px}
+.corte-input:focus{outline:2px solid var(--butter-ink);outline-offset:1px;background:#fff}
+.corte-auto{cursor:pointer;border:none;background:color-mix(in srgb,var(--butter-ink) 20%,transparent);color:var(--butter-ink);font-family:var(--font-ui);font-weight:700;font-size:11px;padding:4px 9px;border-radius:7px;margin-left:7px}
+.corte-auto:hover{filter:brightness(1.05)}
+/* ---- notas del contador ---- */
+.notes{width:100%;min-height:120px;font-family:var(--font-ui);font-size:13.5px;line-height:1.55;color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px 15px;resize:vertical}
+.notes:focus{outline:2px solid var(--peach-ink);outline-offset:1px;background:var(--surface)}
+/* ---- tabla año completo (fuente reducida) ---- */
+table.rep-year{font-size:10.5px;min-width:0}
+table.rep-year th,table.rep-year td{padding:4px 6px}
+table.rep-year th:first-child,table.rep-year td:first-child{min-width:148px}
+table.rep-year tr.grp td,table.rep-year tr.total td{font-size:11px}
+table.rep-year tr.grand td{font-size:11.5px}
+@media(max-width:640px){table.rep-year{font-size:9.5px}table.rep-year th:first-child,table.rep-year td:first-child{min-width:112px}table.rep-year th,table.rep-year td{padding:3px 4px}}
+
+/* ---- fecha de corte: calendario ---- */
+.corte-cal{cursor:pointer;border:none;background:color-mix(in srgb,var(--butter-ink) 20%,transparent);color:var(--butter-ink);padding:4px 7px;border-radius:7px;margin-left:7px;display:inline-flex;align-items:center}
+.corte-cal svg{width:15px;height:15px}
+.corte-date{width:0;height:0;opacity:0;position:absolute;pointer-events:none}
+/* ---- consolidado: recuadros más resaltados + tabla más legible ---- */
+#consKpis{gap:14px}
+#consKpis .kpi{background:var(--surface);border:1.5px solid color-mix(in srgb,var(--mint-ink) 24%,var(--line));box-shadow:0 8px 20px -13px rgba(43,51,80,.45),inset 0 0 0 1px rgba(255,255,255,.5);padding:17px 19px;border-radius:14px}
+#consKpis .kpi .lab{font-size:13px}
+#consKpis .kpi .val{font-size:26px}
+#consKpis .kpi.accent{background:linear-gradient(145deg,var(--mint),color-mix(in srgb,var(--mint) 55%,#fff));border-color:transparent}
+#consTable{font-size:12px}
+#consTable th,#consTable td{padding:6px 9px}
+.grand td.iva-cuat{background:var(--surface);border:none;font-size:15px;font-weight:800}
+.iva-fav{color:#ec8d9c!important}
+.iva-green{color:#2f9d6e!important}
+.iva-orange{color:#e0872f!important}
+.iva-red{color:#d1495b!important}
+/* ---- tarjetas de meses (reporte del mes) ---- */
+.month-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:12px;margin-bottom:6px}
+.month-card{position:relative;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px 14px;cursor:default;transition:all .13s}
+.month-card.has{cursor:pointer}
+.month-card.has:hover{border-color:var(--mint-ink);transform:translateY(-2px);box-shadow:var(--shadow)}
+.month-card.empty{opacity:.5}
+.month-card.active{border-color:var(--mint-ink);box-shadow:inset 0 0 0 1.5px var(--mint-ink);background:var(--surface)}
+.month-card .mc-mo{font-family:var(--font-dis);font-weight:700;font-size:14px}
+.month-card .mc-tot{font-variant-numeric:tabular-nums;font-weight:700;font-size:17px;margin-top:3px}
+.month-card .mc-empty{color:var(--ink-faint);font-size:12.5px;margin-top:6px}
+.month-card .mc-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}
+.month-card .mc-del{position:absolute;top:8px;right:8px;width:27px;height:27px;border:none;border-radius:8px;background:var(--rose);color:var(--rose-ink);cursor:pointer;display:grid;place-items:center;opacity:0;transition:opacity .13s}
+.month-card.has:hover .mc-del{opacity:1}
+.month-card .mc-del svg{width:14px;height:14px;pointer-events:none}
+/* ---- tarjetas de cuatrimestre con bisel (año) ---- */
+.cuat-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:4px}
+@media(max-width:640px){.cuat-cards{grid-template-columns:1fr}}
+.cuat-card{border-radius:16px;padding:16px 19px;box-shadow:inset 2px 2px 5px rgba(255,255,255,.8),inset -3px -3px 8px rgba(43,51,80,.15),0 9px 22px -13px rgba(43,51,80,.45)}
+.cuat-card .cc-lab{font-size:12px;font-weight:700;margin-bottom:6px}
+.cuat-card .cc-val{font-family:var(--font-dis);font-weight:800;font-size:24px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.cuat-card .cc-sub{font-size:11px;margin-top:4px;color:var(--ink-soft)}
+.cuat-card.c1{background:linear-gradient(145deg,var(--sky),color-mix(in srgb,var(--sky) 55%,#fff))}
+.cuat-card.c1 .cc-lab,.cuat-card.c1 .cc-val{color:var(--sky-ink)}
+.cuat-card.c2{background:linear-gradient(145deg,var(--mint),color-mix(in srgb,var(--mint) 55%,#fff))}
+.cuat-card.c2 .cc-lab,.cuat-card.c2 .cc-val{color:var(--mint-ink)}
+.cuat-card.c3{background:linear-gradient(145deg,var(--peach),color-mix(in srgb,var(--peach) 55%,#fff))}
+.cuat-card.c3 .cc-lab,.cuat-card.c3 .cc-val{color:var(--peach-ink)}
+/* ---- IVA pagado 2025 (editable) ---- */
+.paid-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:640px){.paid-cards{grid-template-columns:1fr}}
+.paid-card{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px 15px}
+.paid-card .pc-lab{font-size:11.5px;color:var(--ink-soft);font-weight:600;margin-bottom:7px}
+.paid-card input{font-family:var(--font-ui);font-weight:700;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 11px;width:100%;font-variant-numeric:tabular-nums}
+.paid-card input:focus{outline:2px solid var(--sky-ink);outline-offset:1px}
+
+/* ---- tarjetas de meses resaltadas + selección múltiple ---- */
+.month-card{box-shadow:0 2px 9px -6px rgba(43,51,80,.35)}
+.month-card.has{border:1.5px solid color-mix(in srgb,var(--sky-ink) 28%,var(--line));background:var(--surface);padding-top:15px}
+.month-card.has .mc-mo{display:inline-block;background:var(--sky);color:var(--sky-ink);padding:3px 12px;border-radius:999px;font-size:13.5px;font-weight:700;letter-spacing:.01em}
+.month-card.has:hover{transform:translateY(-2px);box-shadow:0 11px 24px -12px rgba(43,51,80,.5);border-color:var(--sky-ink)}
+.month-card.active{border:2px solid var(--mint-ink);background:var(--mint);box-shadow:0 9px 22px -10px color-mix(in srgb,var(--mint-ink) 55%,transparent)}
+.month-card.active .mc-mo{background:var(--mint-ink);color:#fff}
+.month-card.active .mc-tot{color:var(--mint-ink)}
+.month-card.empty .mc-mo{display:inline-block;background:var(--line);color:var(--ink-faint);padding:3px 12px;border-radius:999px;font-size:13px;font-weight:600}
+
+/* ---- hoja proyección ---- */
+.tab.h5{--c:var(--lav);--ci:var(--lav-ink)}
+.medidor{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:15px 17px;margin-bottom:16px}
+.medidor .m-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;gap:10px;flex-wrap:wrap}
+.medidor .m-lbl{font-size:11.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em}
+.medidor .m-val{font-family:var(--font-dis);font-weight:800;font-size:19px}
+.med-bar{height:15px;border-radius:999px;background:var(--line);overflow:hidden}
+.med-fill{height:100%;border-radius:999px;transition:width .3s ease,background .3s ease}
+.med-ticks{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-faint);margin-top:6px}
+.factor-box{display:flex;flex-direction:column;gap:16px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:17px 19px;margin-bottom:16px}
+.factor-row{display:grid;grid-template-columns:1fr auto;gap:9px 14px;align-items:center}
+.factor-row .factor-lbl{font-size:13px;font-weight:600;color:var(--ink)}
+.factor-row .factor-val{font-family:var(--font-dis);font-weight:800;font-size:19px;color:var(--mint-ink);min-width:60px;text-align:right}
+.factor-row .factor-val.fc{color:var(--peach-ink)}
+.factor-row input[type=range]{grid-column:1/3;width:100%;height:7px;accent-color:var(--mint-ink);cursor:pointer}
+.factor-row:last-child input[type=range]{accent-color:var(--peach-ink)}
+.proy-days{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-soft);align-items:center}
+.proy-days b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* ---- proyección: factores editables, inputs de base, cajón flotante ---- */
+.factor-edit{display:inline-flex;align-items:center;gap:3px;justify-self:end;font-weight:700;color:var(--ink-soft)}
+.factor-num{width:66px;font-family:var(--font-dis);font-weight:800;font-size:17px;color:var(--mint-ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:5px 8px;text-align:right}
+.factor-edit.fc .factor-num{color:var(--peach-ink)}
+.factor-num:focus{outline:2px solid var(--mint-ink);outline-offset:1px}
+.factor-edit.fc .factor-num:focus{outline-color:var(--peach-ink)}
+.proy-tbl td.pedit{padding:4px 9px}
+.proy-tbl input.pcell{width:100%;min-width:92px;font-family:var(--font-ui);font-size:12.5px;font-weight:600;text-align:right;border:1px solid color-mix(in srgb,var(--lav-ink) 30%,var(--line));border-radius:7px;padding:5px 8px;background:var(--surface);color:var(--ink);font-variant-numeric:tabular-nums}
+.proy-tbl input.pcell:focus{outline:2px solid var(--lav-ink);outline-offset:1px;background:var(--surface-2)}
+.proy-float{position:fixed;right:18px;top:calc(var(--safe-t) + 84px);z-index:45;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 36px -14px rgba(43,51,80,.55);padding:13px 16px;width:194px}
+.proy-float .pf-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft)}
+.proy-float .pf-val{font-family:var(--font-dis);font-weight:800;font-size:22px;margin:3px 0 2px}
+.proy-float .pf-sub{font-size:11px;color:var(--ink-soft);margin-bottom:9px}
+.proy-float .pf-bar{height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.proy-float .pf-fill{height:100%;border-radius:999px;transition:width .3s ease,background .3s ease}
+@media(max-width:560px){.proy-float{right:10px;top:calc(var(--safe-t) + 70px);width:150px;padding:10px 12px}.proy-float .pf-val{font-size:18px}}
+
+/* ---- factor por línea (deslizador) ---- */
+.proy-tbl td.pedit{padding:4px 8px}
+.proy-tbl .pfac-wrap{display:inline-flex;align-items:center;gap:8px;min-width:150px}
+.proy-tbl input.pfac{width:96px;height:5px;cursor:pointer;accent-color:var(--mint-ink)}
+.proy-tbl .pfac-wrap.c input.pfac{accent-color:var(--peach-ink)}
+.proy-tbl .pfac-v{font-size:11.5px;font-weight:800;color:var(--mint-ink);min-width:40px;text-align:right;font-variant-numeric:tabular-nums}
+.proy-tbl .pfac-wrap.c .pfac-v{color:var(--peach-ink)}
+/* ---- cuadros ventas/compras por % (consolidado) ---- */
+.pct-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin:0 0 18px}
+@media(max-width:640px){.pct-cards{grid-template-columns:1fr 1fr}}
+.pct-card{border-radius:12px;padding:12px 15px;border:1px solid var(--line);box-shadow:0 4px 12px -9px rgba(43,51,80,.4)}
+.pct-card.v{background:color-mix(in srgb,var(--sky) 48%,var(--surface))}
+.pct-card.c{background:color-mix(in srgb,var(--lav) 48%,var(--surface))}
+.pct-card .pc-lab{font-size:11.5px;font-weight:700;color:var(--ink-soft);margin-bottom:5px}
+.pct-card .pc-val{font-family:var(--font-dis);font-weight:800;font-size:18px;font-variant-numeric:tabular-nums}
+.pct-card.v .pc-val{color:var(--sky-ink)} .pct-card.c .pc-val{color:var(--lav-ink)}
+/* ---- filas de neto por porcentaje (consolidado) ---- */
+table.rep tr.net td{background:color-mix(in srgb,var(--mint) 26%,var(--surface));font-weight:700;color:var(--ink)}
+table.rep tr.net td:first-child{background:color-mix(in srgb,var(--mint) 26%,var(--surface))}
+
+/* ---- validación reportes vs balance ---- */
+.val-checks{margin-top:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:14px 16px}
+.val-checks h4{font-family:var(--font-dis);font-size:13px;margin:0 0 10px;font-weight:700}
+.vc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:7px}
+.vc-item{display:flex;align-items:center;gap:10px;font-size:12.5px;padding:6px 11px;border-radius:8px}
+.vc-item.ok{background:var(--ok-bg)} .vc-item.bad{background:var(--bad-bg)}
+.vc-item .vc-l{flex:1;color:var(--ink-soft);font-weight:600}
+.vc-item .vc-v{font-weight:700}
+.vc-item.ok .vc-s{color:var(--ok-ink);font-weight:800} .vc-item.bad .vc-s{color:var(--bad-ink);font-weight:700}
+
+/* ---- vista compartida ---- */
+.shared-banner{background:var(--lav);color:var(--lav-ink);text-align:center;font-weight:600;font-size:13px;padding:10px 16px;border:1px solid color-mix(in srgb,var(--lav-ink) 25%,transparent);border-radius:12px;margin:14px 0 0}
+.shared-banner b{font-weight:800}
+
+/* ---- prorrateo editable ---- */
+.vc-item .pror-input{width:128px;font-family:var(--font-ui);font-weight:700;font-size:13px;text-align:right;border:1px solid color-mix(in srgb,var(--lav-ink) 35%,var(--line));border-radius:7px;padding:4px 8px;background:var(--surface);color:var(--ink);font-variant-numeric:tabular-nums}
+.vc-item .pror-input:focus{outline:2px solid var(--lav-ink);outline-offset:1px}
+
+.vc-item .pror-btn{border:none;background:color-mix(in srgb,var(--lav-ink) 16%,transparent);color:var(--lav-ink);font-size:11px;font-weight:700;padding:3px 8px;border-radius:7px;cursor:pointer;margin-left:4px}
+.vc-item .pror-btn:hover{filter:brightness(1.05)}
+</style>
+</head>
+<body>
+
+<header class="app">
+  <div class="wrap app-row">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M9 18V5l10-2v13" stroke="#2f9d6e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6" cy="18" r="3" stroke="#4f93d8" stroke-width="1.8"/><circle cx="16" cy="16" r="3" stroke="#4f93d8" stroke-width="1.8"/></svg>
+      </div>
+      <div>
+        <h1>Control de IVA · La Nota Musical</h1>
+        <p>Francisco Javier Viveros Vásquez · NIT 2.708.235-1</p>
+      </div>
+    </div>
+    <div class="corte" id="corteChip" title="Fecha de corte del último reporte">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>Fecha de corte: <input id="corteInput" class="corte-input" type="text" placeholder="dd/mmm/aaaa" aria-label="Fecha de corte editable" spellcheck="false"><button id="corteCal" class="corte-cal" title="Elegir con calendario" aria-label="Elegir fecha con calendario"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2.5" stroke="currentColor" stroke-width="1.9"/><path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg></button><input type="date" id="corteDate" class="corte-date" aria-hidden="true"><button id="corteAuto" class="corte-auto" title="Usar la fecha del último balance de prueba">auto</button></span>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div id="sharedBanner" class="shared-banner" hidden>📄 Vista compartida (solo lectura) · Control de IVA · La Nota Musical · corte <b class="sb-corte">—</b></div>
+
+  <div class="toolbar">
+    <button class="btn load" id="btnLoad"><svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0L8 8m4-4l4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>Cargar información</button>
+    <button class="btn save" id="btnSave" disabled><svg viewBox="0 0 24 24" fill="none"><path d="M5 3h11l3 3v15H5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 3v5h7M8 21v-6h8v6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Grabar datos</button>
+    <button class="btn pdf" id="btnPdf"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3h7l5 5v13H7z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 13h5M9.5 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Exportar PDF</button>
+    <button class="btn" id="btnShare" style="--c:var(--lav);--ci:var(--lav-ink)"><svg viewBox="0 0 24 24" fill="none"><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="18" cy="5" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="6" cy="12" r="2.6" stroke="currentColor" stroke-width="1.8"/><circle cx="18" cy="19" r="2.6" stroke="currentColor" stroke-width="1.8"/></svg>Compartir</button>
+    <button class="btn ghost" id="btnBackup"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v10m0 0l-3-3m3 3l3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="12" cy="6" rx="7" ry="3" stroke="currentColor" stroke-width="1.8"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6" stroke="currentColor" stroke-width="1.8"/></svg>Respaldo</button>
+    <input type="file" id="restoreFile" accept="application/json" hidden>
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab h1" role="tab" aria-selected="true" data-tab="cons"><span class="dot"></span>Consolidado por cuatrimestre</button>
+    <button class="tab h2" role="tab" aria-selected="false" data-tab="mes"><span class="dot"></span>Reporte del mes</button>
+    <button class="tab h5" role="tab" aria-selected="false" data-tab="proy"><span class="dot"></span>Proyección</button>
+    <button class="tab h4" role="tab" aria-selected="false" data-tab="anio"><span class="dot"></span>Año completo</button>
+    <button class="tab h3" role="tab" aria-selected="false" data-tab="obs"><span class="dot"></span>Observaciones</button>
+  </nav>
+
+  <!-- HOJA 1: CONSOLIDADO -->
+  <section class="panel" id="panel-cons">
+    <div id="consEmpty" class="empty">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 20V10m5 10V4m5 16v-7m5 7V8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <h3>Aún no hay periodos guardados</h3>
+      <p>Usa <b>Cargar información</b> para subir el Balance de Prueba y el Reporte de Compras, revisa el mes y pulsa <b>Grabar datos</b>. El consolidado y las gráficas se arman aquí.</p>
+    </div>
+    <div id="consBody" hidden>
+      <div class="seg" id="cuatSeg" role="tablist" aria-label="Seleccionar cuatrimestre">
+        <button class="seg-btn" data-cuat="0">1er cuatrimestre<small>Ene – Abr</small></button>
+        <button class="seg-btn" data-cuat="1">2do cuatrimestre<small>May – Ago</small></button>
+        <button class="seg-btn" data-cuat="2">3er cuatrimestre<small>Sep – Dic</small></button>
+      </div>
+      <div class="kpis" id="consKpis"></div>
+      <h2 class="sec" style="margin-top:2px">Ventas y compras netas por porcentaje <span class="pill">netas de devoluciones</span></h2>
+      <div class="pct-cards" id="consPct"></div>
+      <h2 class="sec" id="consTitle">Control de impuestos</h2>
+      <div class="tbl-scroll"><table class="rep" id="consTable"></table></div>
+      <div class="legend-row">
+        <span><i style="background:var(--sky)"></i>Ingresos</span>
+        <span><i style="background:var(--lav)"></i>Compras</span>
+        <span><i style="background:var(--peach)"></i>Impuestos</span>
+        <span><i style="background:var(--butter)"></i>Columna de cuatrimestre</span>
+      </div>
+      <div class="charts">
+        <div class="chartbox"><h3 id="chVCtitle">Ventas vs Compras</h3><div class="cv"><canvas id="chVC"></canvas></div></div>
+        <div class="chartbox"><h3 id="chIVAtitle">IVA Generado y Descontable</h3><div class="cv"><canvas id="chIVA"></canvas></div></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- HOJA 2: MES -->
+  <section class="panel" id="panel-mes" hidden>
+    <div id="mesEmpty" class="empty">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="17" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 2v4M16 2v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <h3>Aún no hay periodos</h3>
+      <p>Carga un Balance + Compras y pulsa <b>Grabar datos</b>. Los meses del año aparecerán aquí para seleccionar y eliminar.</p>
+    </div>
+    <div id="mesCardsWrap" hidden>
+      <h2 class="sec">Meses del año <span class="pill">toca uno o varios meses para ver su reporte · usa la papelera para eliminar</span></h2>
+      <div class="month-cards" id="mesCards"></div>
+    </div>
+    <div id="mesBody" hidden>
+      <h2 class="sec" id="mesTitle">Reporte del mes</h2>
+      <div class="kpis" id="mesKpis"></div>
+      <div class="tbl-scroll"><table class="rep" id="mesTable"></table></div>
+      <div id="mesRecon" style="margin-top:14px"></div>
+    </div>
+  </section>
+
+  <!-- HOJA: AÑO COMPLETO -->
+  <section class="panel" id="panel-anio" hidden>
+    <div id="anioEmpty" class="empty">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 20V10m5 10V4m5 16v-7m5 7V8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <h3>Aún no hay periodos para el año</h3>
+      <p>Carga y graba periodos para ver aquí el reporte anual completo, con todos los meses y cuatrimestres.</p>
+    </div>
+    <div id="anioBody" hidden>
+      <div class="kpis" id="anioKpis"></div>
+      <h2 class="sec" style="margin-top:2px">Ventas y compras netas por porcentaje <span class="pill">año · netas de devoluciones</span></h2>
+      <div class="pct-cards" id="anioPct"></div>
+      <h2 class="sec" style="margin-top:4px">Totales por cuatrimestre <span class="pill">IVA a pagar en el periodo</span></h2>
+      <div class="cuat-cards" id="cuatCards"></div>
+      <h2 class="sec" style="margin-top:18px">IVA pagado 2025 <span class="pill">editable · referencia de gerencia</span></h2>
+      <div class="paid-cards" id="paidCards"></div>
+      <h2 class="sec" style="margin-top:20px">Control de IVA · Año completo <span id="anioYear">2026</span> <span class="pill">12 meses · cuatrimestres · total</span></h2>
+      <div class="tbl-scroll"><table class="rep rep-year" id="anioTable"></table></div>
+      <div class="legend-row">
+        <span><i style="background:var(--sky)"></i>Ingresos</span>
+        <span><i style="background:var(--lav)"></i>Compras</span>
+        <span><i style="background:var(--peach)"></i>Impuestos</span>
+        <span><i style="background:var(--butter)"></i>Columnas de cuatrimestre</span>
+      </div>
+      <div class="charts">
+        <div class="chartbox"><h3>Ventas vs Compras — año</h3><div class="cv"><canvas id="chVCy"></canvas></div></div>
+        <div class="chartbox"><h3>IVA Generado y Descontable — año</h3><div class="cv"><canvas id="chIVAy"></canvas></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOJA: PROYECCIÓN -->
+  <section class="panel" id="panel-proy" hidden>
+    <div id="proyEmpty" class="empty">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 18L9 11l4 4 7-9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h5v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <h3>Sin un periodo para proyectar</h3>
+      <p>Carga y graba una fracción de mes (por ejemplo Octubre 1–15) para proyectar el IVA del mes completo con factores de variación.</p>
+    </div>
+    <div id="proyBody" hidden>
+      <h2 class="sec">Proyección del mes con factores de variación <span class="pill">estima el mes completo desde la fracción real</span></h2>
+      <div class="obs-controls">
+        <label class="obs-mes">Mes a proyectar <select id="proyMesSel"></select></label>
+        <div class="proy-days" id="proyDays"></div>
+        <button class="btn ghost sm" id="proyReset" title="Dejar los valores como al inicio"><svg viewBox="0 0 24 24" fill="none" style="width:15px;height:15px"><path d="M3 12a9 9 0 109-9 9 9 0 00-7 3.3M3 3v4h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>Reset</button>
+      </div>
+      <div class="kpis" id="proyKpis"></div>
+      <div class="medidor" id="proyMedidor"></div>
+      <div class="factor-box">
+        <div class="factor-row">
+          <span class="factor-lbl">📈 Variación general en Ventas (mueve con el mouse)</span>
+          <span class="factor-val" id="fvTxt">0%</span>
+          <input type="range" id="fvSlider" min="-50" max="100" step="1" value="0" aria-label="Variación general en ventas">
+        </div>
+        <div class="factor-row">
+          <span class="factor-lbl">🛒 Variación general en Compras (mueve con el mouse)</span>
+          <span class="factor-val fc" id="fcTxt">0%</span>
+          <input type="range" id="fcSlider" min="-50" max="150" step="1" value="0" aria-label="Variación general en compras">
+        </div>
+      </div>
+      <div class="tbl-scroll"><table class="rep proy-tbl" id="proyTable"></table></div>
+      <div id="proyAlert" style="margin-top:14px"></div>
+      <p class="muted" style="font-size:11.5px;margin-top:10px">Cada línea de venta y de compra tiene su <b>propio factor %</b> (editable) y su <b>valor proyectado restante</b> (editable). El factor de una línea recalcula solo esa base; editar el valor lo deja manual. «Otros» (devoluciones, gastos, arrendo, rete) se proyecta en línea recta. Mes completo ⇒ sin proyección.</p>
+    </div>
+  </section>
+
+  <!-- HOJA 3: OBSERVACIONES -->
+  <section class="panel" id="panel-obs" hidden>
+    <h2 class="sec">Control de IVA para gerencia <span class="pill" id="obsScope">—</span></h2>
+    <p class="muted" id="obsCorteLine" style="margin:-6px 0 14px">Informe con corte a <b id="obsCorteVal">—</b> · indica si el IVA va acorde a lo proyectado por la empresa.</p>
+    <div class="obs-controls">
+      <div class="seg sm" id="obsCuatSeg" role="tablist" aria-label="Cuatrimestre a analizar">
+        <button class="seg-btn" data-ocuat="0">1er cuat</button>
+        <button class="seg-btn" data-ocuat="1">2do cuat</button>
+        <button class="seg-btn" data-ocuat="2">3er cuat</button>
+      </div>
+      <label class="obs-mes">Mes
+        <select id="obsMesSel"></select>
+      </label>
+    </div>
+    <div class="cfg">
+      <label>Proyección IVA mensual (COP)
+        <input type="text" id="cfgProy" inputmode="numeric" value="5.000.000">
+      </label>
+      <label>Banda 0% — mínimo (COP)
+        <input type="text" id="cfgMin" inputmode="numeric" value="1.000.000">
+      </label>
+      <label>Banda 0% — máximo (COP)
+        <input type="text" id="cfgMax" inputmode="numeric" value="5.000.000">
+      </label>
+    </div>
+    <div id="obsEmpty" class="empty">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6A2 2 0 0022 18L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <h3>Sin datos para analizar</h3>
+      <p>Graba al menos un periodo para generar las observaciones frente a lo proyectado por la empresa.</p>
+    </div>
+    <div id="obsBody" hidden></div>
+    <div id="obsNotesWrap" hidden>
+      <h2 class="sec" style="margin-top:22px">Observaciones adicionales del contador</h2>
+      <textarea id="obsNotes" class="notes" placeholder="Escribe aquí comentarios para la gerencia sobre este periodo. Se guardan automáticamente y se incluyen en el PDF."></textarea>
+    </div>
+  </section>
+
+  <p class="foot">Aplicativo de control de IVA · La Nota Musical · Los datos se guardan en este dispositivo/navegador. Usa <b>Respaldo</b> para conservar una copia.</p>
+</main>
+
+<!-- MODAL CARGUE -->
+<div class="scrim" id="scrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <h3 id="mTitle">Cargar información del periodo</h3>
+    <p class="lead">Sube los reportes del periodo exportados de Celeste. <b>Ventas, Compras y Balance</b> son obligatorios; las <b>devoluciones (DVV y DVC)</b> son opcionales si no hubo en el periodo. El balance sirve para validar los totales.</p>
+
+    <label class="drop" id="dropVen"><div class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3h9l5 5v13H5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 13h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div class="txt"><b id="venName">1 · Reporte de Ventas</b><span>Ventas del periodo (.xlsx)</span></div>
+      <input type="file" id="fileVen" accept=".xlsx,.xls">
+    </label>
+
+    <label class="drop" id="dropDvv"><div class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3h9l5 5v13H5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 13h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div class="txt"><b id="dvvName">2 · Devoluciones en Ventas</b><span>Reporte DVV — opcional (.xlsx)</span></div>
+      <input type="file" id="fileDvv" accept=".xlsx,.xls">
+    </label>
+
+    <label class="drop" id="dropCom"><div class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3h9l5 5v13H5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 13h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div class="txt"><b id="comName">3 · Reporte de Compras</b><span>Compras del periodo (.xlsx)</span></div>
+      <input type="file" id="fileCom" accept=".xlsx,.xls">
+    </label>
+
+    <label class="drop" id="dropDvc"><div class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3h9l5 5v13H5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 13h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div class="txt"><b id="dvcName">4 · Devoluciones en Compra</b><span>Reporte DVC — opcional (.xlsx)</span></div>
+      <input type="file" id="fileDvc" accept=".xlsx,.xls">
+    </label>
+
+    <label class="drop" id="dropBal"><div class="ic"><svg viewBox="0 0 24 24" fill="none"><path d="M5 3h9l5 5v13H5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 13h8M8 16h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div class="txt"><b id="balName">5 · Balance de Prueba</b><span>Balance General — validación (.xlsx)</span></div>
+      <input type="file" id="fileBal" accept=".xlsx,.xls">
+    </label>
+
+    <div class="perr" id="loadErr"></div>
+    <div class="modal-acts">
+      <button class="btn ghost" id="mCancel">Cancelar</button>
+      <button class="btn load" id="mProcess" disabled>Procesar periodo</button>
+    </div>
+  </div>
+</div>
+
+<div class="proy-float" id="proyFloat" hidden>
+  <div class="pf-title">IVA Neto Proyectado</div>
+  <div class="pf-val" id="pfVal">—</div>
+  <div class="pf-sub" id="pfSub"></div>
+  <div class="pf-bar"><div class="pf-fill" id="pfBar" style="width:0%"></div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ===========================================================
+   Control de IVA — La Nota Musical
+   Lógica validada contra balance Oct 1-15/2026:
+   TOTAL IVA DEL PERIODO = movimiento neto (Crédito−Débito) de la
+   cuenta 2408 (sin saldos iniciales/finales, excluyendo 2408.20).
+   =========================================================== */
+
+const STORE_KEY = "lanota_iva_v1";
+const CFG_KEY   = "lanota_iva_cfg_v1";
+const MESES = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"];
+const MES_ABBR = {ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,jul:6,ago:7,sep:8,set:8,oct:9,nov:10,dic:11};
+const SEED_FLAG="lanota_iva_seeded_v2";
+const SEED={"2026-0-completo": {"id": "2026-0-completo", "year": 2026, "mes": 0, "tipo": "completo", "completo": true, "closed": true, "mesNombre": "ENERO", "corte": "31/ene/2026", "rango": "01/ene/2026 - 31/ene/2026", "ing": {"ventas19": 289961956.2631579, "ventas5": 499047.4, "ventasExcl": 4744500, "devVentas19": -10074537.263157895, "devVentas5": -22857.199999999997, "devExcl": -314500, "total": 284793609.2}, "cmp": {"import19": 0, "compras19": 185516190.89473686, "compras5": 336349.4, "comprasExcl": 3310674, "gastos19": 0, "arrendo19": 0, "devCompra19": -3696.0526315789475, "devCompra5": -957660.8, "devCompra0": 0, "total": 188201857.44210526}, "imp": {"ivaGen19": 55092768.65, "ivaGen5": 24952.37, "ivaDescDVV19": -1914162.08, "ivaDescDVV5": -1142.86, "ivaDescImport19": 0, "ivaDescCompras19": -35248076.27, "ivaDescCompras5": -16817.47, "ivaGenDVC19": 702.25, "ivaGenDVC5": 47883.04, "ivaGastos19": 0, "ivaArrendo19": 0, "reteTDTC": -655224.45, "reteCaracol": 0, "prorrateo": 0, "ajuste": 0}, "totalIva": 17330883.179999996, "controlNeto": 17330883.179999996, "ajuste": 0, "rete16": {"deb": 655224.45, "cre": 0, "mov": 655224.45}, "pagado20": {"deb": 0, "cre": 0}, "val": {"v19": 289961956.2631579, "v5": 499047.4}, "savedAt": "2026-01-01T00:00:00.000Z"}, "2026-1-completo": {"id": "2026-1-completo", "year": 2026, "mes": 1, "tipo": "completo", "completo": true, "closed": true, "mesNombre": "FEBRERO", "corte": "28/feb/2026", "rango": "01/feb/2026 - 28/feb/2026", "ing": {"ventas19": 311447253.7894737, "ventas5": 832095, "ventasExcl": 2102000, "devVentas19": -17117738.263157893, "devVentas5": 0, "devExcl": 0, "total": 297263610.5263158}, "cmp": {"import19": 0, "compras19": 267120342.10526314, "compras5": 206780.99999999997, "comprasExcl": 4622165, "gastos19": 10789.473684210527, "arrendo19": 5621848.684210527, "devCompra19": 0, "devCompra5": 0, "devCompra0": 0, "total": 277581926.26315784}, "imp": {"ivaGen19": 59174975.37, "ivaGen5": 41604.75, "ivaDescDVV19": -3252370.27, "ivaDescDVV5": 0, "ivaDescImport19": 0, "ivaDescCompras19": -50752865, "ivaDescCompras5": -10339.05, "ivaGenDVC19": 0, "ivaGenDVC5": 142348.62, "ivaGastos19": -2050, "ivaArrendo19": -1068151.25, "reteTDTC": -456622.35, "reteCaracol": 0, "prorrateo": 0, "ajuste": 0}, "totalIva": 3816530.8199999975, "controlNeto": 3816530.8199999975, "ajuste": 0, "rete16": {"deb": 456622.35, "cre": 0, "mov": 456622.35}, "pagado20": {"deb": 0, "cre": 0}, "val": {"v19": 311447253.7894737, "v5": 832095}, "savedAt": "2026-01-01T00:00:00.000Z"}, "2026-2-completo": {"id": "2026-2-completo", "year": 2026, "mes": 2, "tipo": "completo", "completo": true, "closed": true, "mesNombre": "MARZO", "corte": "31/mar/2026", "rango": "01/mar/2026 - 31/mar/2026", "ing": {"ventas19": 342987950.57894737, "ventas5": 793808.9999999999, "ventasExcl": 1983000, "devVentas19": -16438377.315789474, "devVentas5": 0, "devExcl": 0, "total": 329326382.2631579}, "cmp": {"import19": 0, "compras19": 230986552.63157895, "compras5": 1266024.4, "comprasExcl": 1439866, "gastos19": 0, "arrendo19": 8994956, "devCompra19": 0, "devCompra5": 0, "devCompra0": 0, "total": 242687399.03157896}, "imp": {"ivaGen19": 65167710.61, "ivaGen5": 39690.45, "ivaDescDVV19": -3123291.69, "ivaDescDVV5": 0, "ivaDescImport19": 0, "ivaDescCompras19": -43887445, "ivaDescCompras5": -63301.22, "ivaGenDVC19": 0, "ivaGenDVC5": 703638.16, "ivaGastos19": 0, "ivaArrendo19": -1709041.64, "reteTDTC": -500035, "reteCaracol": 0, "prorrateo": 0, "ajuste": 0}, "totalIva": 16627924.67, "controlNeto": 16627924.67, "ajuste": 0, "rete16": {"deb": 500035, "cre": 0, "mov": 500035}, "pagado20": {"deb": 0, "cre": 0}, "val": {"v19": 342987950.57894737, "v5": 793808.9999999999}, "savedAt": "2026-01-01T00:00:00.000Z"}, "2026-3-completo": {"id": "2026-3-completo", "year": 2026, "mes": 3, "tipo": "completo", "completo": true, "closed": true, "mesNombre": "ABRIL", "corte": "30/abr/2026", "rango": "01/abr/2026 - 30/abr/2026", "ing": {"ventas19": 317585693.57894737, "ventas5": 1343619.4, "ventasExcl": 5624466, "devVentas19": -14672968.421052631, "devVentas5": -33333.2, "devExcl": -1157983, "total": 308689494.3578947}, "cmp": {"import19": 18147368.42105263, "compras19": 233456363.15789473, "compras5": 345771.99999999994, "comprasExcl": 4111601, "gastos19": 167094.73684210525, "arrendo19": 0, "devCompra19": 0, "devCompra5": 8771.894736842105, "devCompra0": 0, "total": 256236971.21052632}, "imp": {"ivaGen19": 60341278.17, "ivaGen5": 67180.92, "ivaDescDVV19": -2787864, "ivaDescDVV5": -1666.66, "ivaDescImport19": -3448000, "ivaDescCompras19": -44356709, "ivaDescCompras5": -17288.6, "ivaGenDVC19": 0, "ivaGenDVC5": 0, "ivaGastos19": -31748, "ivaArrendo19": 0, "reteTDTC": -627381, "reteCaracol": 0, "prorrateo": 19690, "ajuste": 0}, "totalIva": 9157491.830000002, "controlNeto": 9157491.830000002, "ajuste": 0, "rete16": {"deb": 627381, "cre": 0, "mov": 627381}, "pagado20": {"deb": 0, "cre": 0}, "val": {"v19": 317585693.57894737, "v5": 1343619.4}, "savedAt": "2026-01-01T00:00:00.000Z"}, "2026-4-completo": {"id": "2026-4-completo", "year": 2026, "mes": 4, "tipo": "completo", "completo": true, "closed": true, "mesNombre": "MAYO", "corte": "31/may/2026", "rango": "01/may/2026 - 31/may/2026", "ing": {"ventas19": 333760584.57894737, "ventas5": 561332.8, "ventasExcl": 5597500, "devVentas19": -15721572.684210526, "devVentas5": 0, "devExcl": 0, "total": 324197844.69473684}, "cmp": {"import19": 0, "compras19": 263992968.42105263, "compras5": 496033.2, "comprasExcl": 3042852.5, "gastos19": 144284.2105263158, "arrendo19": 184870.63157894736, "devCompra19": -2380000, "devCompra5": 0, "devCompra0": 0, "total": 265481008.9631579}, "imp": {"ivaGen19": 63414508.03, "ivaGen5": 28066.64, "ivaDescDVV19": -2987098.81, "ivaDescDVV5": 0, "ivaDescImport19": 0, "ivaDescCompras19": -50158664, "ivaDescCompras5": -24801.66, "ivaGenDVC19": 452200, "ivaGenDVC5": 0, "ivaGastos19": -27414, "ivaArrendo19": -35125.42, "reteTDTC": -617522, "reteCaracol": -119106, "prorrateo": 0, "ajuste": 0}, "totalIva": 9925042.780000001, "controlNeto": 9925042.780000001, "ajuste": 0, "rete16": {"deb": 617522, "cre": 0, "mov": 617522}, "pagado20": {"deb": 0, "cre": 0}, "val": {"v19": 333760584.57894737, "v5": 561332.8}, "savedAt": "2026-01-01T00:00:00.000Z"}, "2026-5-completo": {"id": "2026-5-completo", "year": 2026, "mes": 5, "tipo": "completo", "completo": true, "closed": true, "mesNombre": "JUNIO", "corte": "30/jun/2026", "rango": "01/jun/2026 - 30/jun/2026", "ing": {"ventas19": 310509576.31578946, "ventas5": 1555523.2, "ventasExcl": 5284500, "devVentas19": -14326806.210526315, "devVentas5": -5714.199999999999, "devExcl": 0, "total": 303017079.1052632}, "cmp": {"import19": 0, "compras19": 249992000, "compras5": 1406382.6, "comprasExcl": 2415003, "gastos19": 603989.4736842106, "arrendo19": 6746216.7894736845, "devCompra19": -1868474.9473684211, "devCompra5": 0, "devCompra0": 0, "total": 259295116.91578948}, "imp": {"ivaGen19": 58996817.6, "ivaGen5": 77776.16, "ivaDescDVV19": -2722093.18, "ivaDescDVV5": -285.71, "ivaDescImport19": 0, "ivaDescCompras19": -47498480, "ivaDescCompras5": -70319.13, "ivaGenDVC19": 355010.24, "ivaGenDVC5": 0, "ivaGastos19": -114758, "ivaArrendo19": -1281781.19, "reteTDTC": -629169, "reteCaracol": 0, "prorrateo": 0, "ajuste": 0}, "totalIva": 7112717.790000001, "controlNeto": 7112717.790000001, "ajuste": 0, "rete16": {"deb": 629169, "cre": 0, "mov": 629169}, "pagado20": {"deb": 0, "cre": 0}, "val": {"v19": 310509576.31578946, "v5": 1555523.2}, "savedAt": "2026-01-01T00:00:00.000Z"}, "2026-6-completo": {"id": "2026-6-completo", "year": 2026, "mes": 6, "tipo": "completo", "completo": true, "closed": true, "mesNombre": "JULIO", "corte": "31/jul/2026", "rango": "01/jul/2026 - 31/jul/2026", "ing": {"ventas19": 352598187.7368421, "ventas5": 849810.4, "ventasExcl": 1367500, "devVentas19": -19666697.10526316, "devVentas5": 0, "devExcl": 0, "total": 335148801.0315789}, "cmp": {"import19": 0, "compras19": 230331031.57894737, "compras5": 3698299.4, "comprasExcl": 2454320, "gastos19": 448757.8947368421, "arrendo19": 1942.1052631578948, "devCompra19": -880759.052631579, "devCompra5": 0, "devCompra0": 0, "total": 236053591.92631578}, "imp": {"ivaGen19": 66993653.58, "ivaGen5": 42490.47, "ivaDescDVV19": -3736672.45, "ivaDescDVV5": 0, "ivaDescImport19": 0, "ivaDescCompras19": -43762896, "ivaDescCompras5": -184914.97, "ivaGenDVC19": 167344.22, "ivaGenDVC5": 0, "ivaGastos19": -85264, "ivaArrendo19": -369, "reteTDTC": -710275, "reteCaracol": -106758, "prorrateo": 0, "ajuste": 0}, "totalIva": 18616338.849999998, "controlNeto": 18616338.849999998, "ajuste": 0, "rete16": {"deb": 710275, "cre": 0, "mov": 710275}, "pagado20": {"deb": 0, "cre": 0}, "val": {"v19": 352598187.7368421, "v5": 849810.4}, "savedAt": "2026-01-01T00:00:00.000Z"}, "2026-7-completo": {"id": "2026-7-completo", "year": 2026, "mes": 7, "tipo": "completo", "completo": true, "closed": true, "mesNombre": "AGOSTO", "corte": "31/ago/2026", "rango": "01/ago/2026 - 31/ago/2026", "ing": {"ventas19": 316634061.5263158, "ventas5": 468381.2, "ventasExcl": 3982500, "devVentas19": -16676697.631578946, "devVentas5": 0, "devExcl": -376000, "total": 304032245.0947369}, "cmp": {"import19": 0, "compras19": 267590810.52631578, "compras5": 1467303.4, "comprasExcl": 2987724.5, "gastos19": 528252.6315789474, "arrendo19": 0, "devCompra19": -10014289.47368421, "devCompra5": 0, "devCompra0": 0, "total": 262559801.5842105}, "imp": {"ivaGen19": 60160470.36, "ivaGen5": 23419.06, "ivaDescDVV19": -3168572.36, "ivaDescDVV5": 0, "ivaDescImport19": 0, "ivaDescCompras19": -50842254, "ivaDescCompras5": -73365.17, "ivaGenDVC19": 1902715, "ivaGenDVC5": 0, "ivaGastos19": -100368, "ivaArrendo19": 0, "reteTDTC": -612403, "reteCaracol": 0, "prorrateo": 20597, "ajuste": 0}, "totalIva": 7310238.89, "controlNeto": 7310238.89, "ajuste": 0, "rete16": {"deb": 612403, "cre": 0, "mov": 612403}, "pagado20": {"deb": 0, "cre": 0}, "val": {"v19": 316634061.5263158, "v5": 468381.2}, "savedAt": "2026-01-01T00:00:00.000Z"}, "2026-8-completo": {"id": "2026-8-completo", "year": 2026, "mes": 8, "tipo": "completo", "completo": true, "closed": false, "mesNombre": "SEPTIEMBRE", "corte": "30/sep/2026", "rango": "01/sep/2026 - 30/sep/2026", "ing": {"ventas19": 307856813, "ventas5": 698857.4000000001, "ventasExcl": 1086900, "devVentas19": -14669832, "devVentas5": 0, "devExcl": 0, "total": 294972738.4}, "cmp": {"import19": 0, "compras19": 268955924.7368421, "compras5": 454796.4, "comprasExcl": 6188498.08, "gastos19": 792755.7368421053, "arrendo19": 2264601.789473684, "devCompra19": -377374.7368421053, "devCompra5": 0, "devCompra0": 0, "total": 278279202.00631577}, "imp": {"ivaGen19": 58492792.38, "ivaGen5": 34942.87, "ivaDescDVV19": -2787268.08, "ivaDescDVV5": 0, "ivaDescImport19": 0, "ivaDescCompras19": -51101625.7, "ivaDescCompras5": -22739.82, "ivaGenDVC19": 71701.2, "ivaGenDVC5": 0, "ivaGastos19": -150623.59, "ivaArrendo19": -430274.34, "reteTDTC": 0, "reteCaracol": 0, "prorrateo": 0, "ajuste": 0}, "totalIva": 4106904.9199999995, "controlNeto": 4106904.9199999995, "ajuste": 0, "rete16": {"deb": 0, "cre": 0, "mov": 0}, "pagado20": {"deb": 0, "cre": 0}, "val": {"v19": 307856813, "v5": 698857.4000000001}, "savedAt": "2026-09-30T00:00:00.000Z"}, "2026-9-fraccion": {"id": "2026-9-fraccion", "year": 2026, "mes": 9, "tipo": "fraccion", "completo": false, "closed": false, "mesNombre": "OCTUBRE", "corte": "15/oct/2026", "rango": "01/oct/2026 - 15/oct/2026", "ing": {"ventas19": 173375093.84210524, "ventas5": 308190.39999999997, "ventasExcl": 2905000.0, "devVentas19": -5494873.578947368, "devVentas5": -0.0, "devExcl": 0, "total": 171093410.66315788}, "cmp": {"import19": 0.0, "compras19": 72656598.4, "compras5": 1560600.0, "comprasExcl": 2761600.0, "gastos19": 41512.578947371556, "arrendo19": 0.0, "devCompra19": -1782000.0, "devCompra5": -0.0, "devCompra0": 0, "total": 75238310.97894737}, "imp": {"ivaGen19": 32941267.83, "ivaGen5": 15409.52, "ivaDescDVV19": -1044025.98, "ivaDescDVV5": -0.0, "ivaDescImport19": -0.0, "ivaDescCompras19": -13804753.49, "ivaDescCompras5": -78030.0, "ivaGenDVC19": 338580.0, "ivaGenDVC5": 0.0, "ivaGastos19": -7887.390000000596, "ivaArrendo19": -0.0, "reteTDTC": -0.0, "reteCaracol": 0, "prorrateo": 0.0, "ajuste": -3.725290298461914e-09}, "totalIva": 18360560.489999995, "controlNeto": 18360560.489999995, "ajuste": -3.725290298461914e-09, "rete16": {"deb": 0.0, "cre": 0.0, "mov": 0.0}, "pagado20": {"deb": 0.0, "cre": 0.0}, "val": {"v19": 173375104.14, "v5": 308190.48}, "savedAt": "2026-10-16T00:00:00.000Z"}};
+function seedIfNeeded(){
+  if(window.__SHARED__) return;
+  try{ if(localStorage.getItem(SEED_FLAG)) return; }catch(e){ return; }
+  let added=0;
+  for(const k in SEED){
+    const s=SEED[k];
+    const exists=Object.values(state.periods).some(p=>p.year===s.year&&p.mes===s.mes);
+    if(!exists){ state.periods[k]=JSON.parse(JSON.stringify(s)); added++; }
+  }
+  try{ localStorage.setItem(SEED_FLAG,"1"); }catch(e){}
+  if(added) saveStore();
+}
+
+const fmt0 = new Intl.NumberFormat("es-CO",{maximumFractionDigits:0});
+const money = v => (v===0||v==null)?"—":fmt0.format(Math.round(v));
+const moneyNeg = v => {
+  if(v===0||v==null) return '<td class="num z">—</td>';
+  const cls = v<0 ? "num neg":"num";
+  return `<td class="${cls}">${v<0?"("+fmt0.format(Math.round(-v))+")":fmt0.format(Math.round(v))}</td>`;
+};
+const money3 = v => (v===0||v==null)?"—":fmt0.format(Math.round(v/1000)*1000);
+function ivaColorClass(v){ if(v<0)return "iva-fav"; if(v<=20000000)return "iva-green"; if(v<=30000000)return "iva-orange"; return "iva-red"; }
+const parseMoney = s => { if(typeof s==="number")return s; const n=String(s||"").replace(/[^\d-]/g,""); return n?parseInt(n,10):0; };
+
+/* ---------- estado ---------- */
+let state = loadStore();            // { periods: { "YYYY-M-tipo": model } }
+let cfg   = loadCfg();
+let currentModel = null;            // modelo recién cargado o seleccionado (para hoja Mes)
+let pendingModel = null;            // modelo cargado y sin grabar
+let selMonths = [];                 // meses seleccionados (multi) en Reporte del mes
+let charts = {};
+let uiCuat=null;      // cuatrimestre visible en consolidado
+let uiObsCuat=null;   // cuatrimestre en observaciones
+let uiObsMes=null;    // mes específico (0-11) o null = todo el cuatrimestre
+let uiProyMes=null;   // mes a proyectar
+const Q=[[0,1,2,3],[4,5,6,7],[8,9,10,11]];
+const QLBL=["1er cuatrimestre","2do cuatrimestre","3er cuatrimestre"];
+function corteKey(s){ const m=String(s||"").match(/(\d{1,2})\/([a-zñ]{3})\/(\d{4})/i); if(!m)return 0; return (+m[3])*10000+((MES_ABBR[m[2].toLowerCase()]||0))*100+(+m[1]); }
+function latestPeriod(){ const a=Object.values(state.periods); if(!a.length)return null; return a.slice().sort((x,y)=>(x.year-y.year)||(x.mes-y.mes)||(corteKey(x.corte)-corteKey(y.corte))).pop(); }
+function effectiveCorte(){ if(state.corteOverride)return state.corteOverride; const p=latestPeriod(); return p?p.corte:null; }
+function defaultCuat(md){ for(let q=2;q>=0;q--){ if(Q[q].some(mi=>md[mi]))return q; } return 0; }
+
+function loadStore(){ let s; if(window.__SHARED__&&window.__SHARED__.state){ s=JSON.parse(JSON.stringify(window.__SHARED__.state)); } else { try{ s=JSON.parse(localStorage.getItem(STORE_KEY)); }catch(e){ s=null; } } if(!s||typeof s!=="object") s={periods:{}}; if(!s.periods)s.periods={}; if(!("corteOverride" in s))s.corteOverride=null; if(!s.notes||typeof s.notes!=="object")s.notes={}; if(!Array.isArray(s.paid2025))s.paid2025=[11583000,26237000,-2227000]; if(!s.proy||typeof s.proy!=="object")s.proy={}; return s; }
+function saveStore(){ if(window.__SHARED__)return; try{localStorage.setItem(STORE_KEY,JSON.stringify(state));}catch(e){toast("No se pudo guardar en este navegador","bad");} }
+function loadCfg(){ if(window.__SHARED__&&window.__SHARED__.cfg)return Object.assign({proy:5000000,min:1000000,max:5000000},window.__SHARED__.cfg); try{return Object.assign({proy:5000000,min:1000000,max:5000000},JSON.parse(localStorage.getItem(CFG_KEY))||{});}catch(e){return {proy:5000000,min:1000000,max:5000000};} }
+function saveCfg(){ if(window.__SHARED__)return; try{localStorage.setItem(CFG_KEY,JSON.stringify(cfg));}catch(e){} }
+
+/* ===========================================================
+   PARSERS
+   =========================================================== */
+function readWB(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>{ try{ res(XLSX.read(new Uint8Array(e.target.result),{type:"array",cellDates:true})); }catch(err){ rej(err);} };
+    r.onerror=()=>rej(new Error("No se pudo leer "+file.name));
+    r.readAsArrayBuffer(file);
+  });
+}
+function sheetRows(wb){ const ws=wb.Sheets[wb.SheetNames[0]]; return XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}); }
+
+function findPeriodo(rows){
+  for(const row of rows){
+    for(const c of row){
+      if(typeof c==="string" && /periodo/i.test(c)){
+        const br=c.match(/\[([^\]]*)\]/);
+        const scope=br?br[1]:c;
+        const dates=[...scope.matchAll(/(\d{1,2})\/([a-zñ]{3})\/(\d{4})/gi)];
+        if(dates.length){
+          const s=dates[0], e=dates[dates.length-1];
+          return {d1:+s[1],mo1:MES_ABBR[s[2].toLowerCase()],y1:+s[3],d2:+e[1],mo2:MES_ABBR[e[2].toLowerCase()],y2:+e[3],raw:c.trim()};
+        }
+      }
+    }
+  }
+  // Respaldo: derivar el periodo de la columna "Fecha" (reportes sin encabezado de Periodo)
+  let fcol=-1;
+  for(const row of rows){ const i=row.findIndex(c=>typeof c==="string" && c.trim().toLowerCase()==="fecha"); if(i>=0){ fcol=i; break; } }
+  if(fcol>=0){
+    let mn=null,mx=null;
+    for(const row of rows){ const v=row[fcol]; if(v instanceof Date && !isNaN(v)){ if(!mn||v<mn)mn=v; if(!mx||v>mx)mx=v; } }
+    if(mn&&mx){ return {d1:mn.getDate(),mo1:mn.getMonth(),y1:mn.getFullYear(),d2:mx.getDate(),mo2:mx.getMonth(),y2:mx.getFullYear(),raw:`${mn.getDate()}/${MESES[mn.getMonth()].slice(0,3).toLowerCase()}/${mn.getFullYear()} - ${mx.getDate()}/${MESES[mx.getMonth()].slice(0,3).toLowerCase()}/${mx.getFullYear()}`}; }
+  }
+  return null;
+}
+const num = x => (typeof x==="number")?x : (x==null||x==="")?0 : (isNaN(+x)?0:+x);
+
+/* Balance de Prueba: devuelve lookup por código de cuenta {deb,cre} */
+function parseBalance(rows){
+  // ubicar fila de encabezado (Cuenta / Débito / Crédito)
+  let cCode=0,cDeb=3,cCre=4;
+  for(const row of rows){
+    const low=row.map(c=>String(c||"").toLowerCase());
+    if(low.some(t=>t.includes("cuenta")) && low.some(t=>t.includes("bito")) && low.some(t=>t.includes("dito"))){
+      cCode = low.findIndex(t=>t.trim()==="cuenta"); if(cCode<0)cCode=0;
+      cDeb  = low.findIndex(t=>t.includes("bito"));
+      cCre  = low.findIndex(t=>t.includes("dito"));
+      break;
+    }
+  }
+  const acc={};
+  for(const row of rows){
+    const code=String(row[cCode]||"").trim();
+    if(/^\d{3,4}(\.\d+)*$/.test(code)){
+      acc[code]={deb:num(row[cDeb]), cre:num(row[cCre])};
+    }
+  }
+  const periodo=findPeriodo(rows);
+  return {acc,periodo};
+}
+const g = (acc,code)=> acc[code] || {deb:0,cre:0};
+// suma de hojas que empiezan por prefijo (excluyendo un set)
+function sumLeaves(acc,prefix,exclude=[]){
+  let deb=0,cre=0;
+  for(const k in acc){
+    if(k.startsWith(prefix) && !exclude.some(e=>k.startsWith(e))){ deb+=acc[k].deb; cre+=acc[k].cre; }
+  }
+  return {deb,cre};
+}
+
+/* Reporte de Compras: totales por tarifa */
+function parseCompras(rows){
+  const out={b19:0,i19:0,b5:0,i5:0,bExcl:0,bExento:0};
+  let inDesc=false;
+  for(const row of rows){
+    const joined=row.map(c=>String(c||"")).join(" ").toLowerCase();
+    if(joined.includes("totales por tarifas de iva") && joined.includes("descontable") && !joined.includes("no descontable")){ inDesc=true; continue; }
+    if(joined.includes("no descontable")){ inDesc=false; }
+    // buscar etiqueta de tarifa en la fila
+    const labCell=row.find(c=>typeof c==="string" && /^\s*(19|5|19,0|5,0)\s*%|^\s*exclu|^\s*exent/i.test(c.trim()));
+    if(!labCell) continue;
+    const nums=row.filter(c=>typeof c==="number");
+    const base=nums.length?nums[0]:0, iva=nums.length>1?nums[1]:0;
+    const L=labCell.trim().toLowerCase().replace(/\s/g,"");
+    if(L.startsWith("19")){ out.b19=base; out.i19=iva; }
+    else if(L.startsWith("5")){ out.b5=base; out.i5=iva; }
+    else if(L.startsWith("exclu")){ out.bExcl=base; }
+    else if(L.startsWith("exent")){ out.bExento=base; }
+  }
+  const periodo=findPeriodo(rows);
+  return Object.assign(out,{periodo});
+}
+
+/* Reporte unificado (Ventas / DVV / Compras / DVC): totales por tarifa + excluido/exento */
+function parseDocReport(rows){
+  const out={b19:0,i19:0,b5:0,i5:0,bExcl:0,bExento:0};
+  let cExcl=-1,cExento=-1,stop=false;
+  for(const row of rows){
+    const low=row.map(c=>String(c||"").toLowerCase().trim());
+    if(low.includes("gravado") && (low.includes("excluido")||low.includes("exento"))){
+      cExcl=low.indexOf("excluido"); cExento=low.indexOf("exento"); break;
+    }
+  }
+  for(const row of rows){
+    if(row.some(c=>String(c||"").trim()==="Totales")){
+      if(cExcl>=0) out.bExcl=num(row[cExcl]);
+      if(cExento>=0) out.bExento=num(row[cExento]);
+      break;
+    }
+  }
+  for(const row of rows){
+    const joined=row.map(c=>String(c||"")).join(" ").toLowerCase();
+    if(joined.includes("no descontable")) stop=true;
+    if(stop) continue;
+    const lab=row.find(c=>typeof c==="string" && /^\s*(19|5)\s*%/.test(c.trim()));
+    if(!lab) continue;
+    const nums=row.filter(c=>typeof c==="number");
+    const base=nums.length?nums[0]:0, iva=nums.length>1?nums[1]:0;
+    const L=lab.trim().replace(/\s/g,"");
+    if(L.startsWith("19")){ out.b19=base; out.i19=iva; }
+    else if(L.startsWith("5")){ out.b5=base; out.i5=iva; }
+  }
+  return Object.assign(out,{periodo:findPeriodo(rows)});
+}
+
+/* ===========================================================
+   MODELO DEL PERIODO
+   =========================================================== */
+function lastDay(y,m){ return new Date(y,m+1,0).getDate(); }
+
+function buildModel(V, DVV, C, DVC, bal){
+  const per = (bal&&bal.periodo) || (V&&V.periodo) || (C&&C.periodo) || (DVV&&DVV.periodo) || (DVC&&DVC.periodo);
+  if(!per) throw new Error("No se pudo detectar el periodo (fecha) en los archivos.");
+  const year=per.y2, mes=per.mo2;
+  if(mes==null) throw new Error("No se reconoció el mes del periodo.");
+  const completo = (per.d1===1 && per.d2===lastDay(year,mes) && per.mo1===per.mo2);
+  const tipo = completo ? "completo":"fraccion";
+  const a=bal.acc, abbr=MESES[mes].slice(0,3).toLowerCase();
+
+  // VENTAS (reporte; valida contra 2408.05)
+  const gen19 = V ? V.i19 : g(a,"2408.05.02").cre;
+  const gen5  = V ? V.i5  : g(a,"2408.05.01").cre;
+  const ventas19b  = V ? V.b19 : gen19/0.19;
+  const ventas5b   = V ? V.b5  : gen5/0.05;
+  const ventasExclb= V ? (V.bExcl+V.bExento) : g(a,"4135.02.01").cre;
+  // DVV (reporte; valida contra 2408.15.05)
+  const dvv19 = DVV ? DVV.i19 : g(a,"2408.15.05.02").deb;
+  const dvv5  = DVV ? DVV.i5  : g(a,"2408.15.05.01").deb;
+  const devVentas19b = DVV ? -DVV.b19 : -(dvv19/0.19);
+  const devVentas5b  = DVV ? -DVV.b5  : -(dvv5/0.05);
+  const devVentas0b  = DVV ? -(DVV.bExcl+DVV.bExento) : 0;
+  // COMPRAS (reporte)
+  const cI19=C.i19, cB19=C.b19, cI5=C.i5, cB5=C.b5, cExcl=C.bExcl, cExento=C.bExento;
+  // DVC (reporte; valida contra 2408.15.10)
+  const dvc19 = DVC ? DVC.i19 : g(a,"2408.15.10.02").cre;
+  const dvc5  = DVC ? DVC.i5  : g(a,"2408.15.10.01").cre;
+  const devCompra19b = DVC ? -DVC.b19 : -(dvc19/0.19);
+  const devCompra5b  = DVC ? -DVC.b5  : -(dvc5/0.05);
+  const devCompra0b  = DVC ? -(DVC.bExcl+DVC.bExento) : 0;
+
+  // BALANCE (descontable servicios/gastos/import/rete + control)
+  const desc19bal = g(a,"2408.10.02").deb;
+  const arrendo19 = g(a,"2408.10.03").deb;
+  const gastosComunes = g(a,"2408.10.04").deb;
+  const serviciosDesc = g(a,"2408.10.06").deb;
+  const import19  = g(a,"2408.10.07").deb;
+  const rete16    = g(a,"2408.16");
+  const prorr     = g(a,"5115.70");
+  const pagado20  = g(a,"2408.20");
+  const gastos19iva = (desc19bal + gastosComunes + serviciosDesc) - cI19;
+
+  const t2408 = sumLeaves(a,"2408.",["2408.20"]);
+  const controlNeto = t2408.cre - t2408.deb;
+
+  const imp = {
+    ivaGen19: gen19, ivaGen5: gen5,
+    ivaDescDVV19: -dvv19, ivaDescDVV5: -dvv5,
+    ivaDescImport19: -import19,
+    ivaDescCompras19: -cI19, ivaDescCompras5: -cI5,
+    ivaGenDVC19: dvc19, ivaGenDVC5: dvc5,
+    ivaGastos19: -gastos19iva, ivaArrendo19: -arrendo19,
+    reteTDTC: -(rete16.deb - rete16.cre), reteCaracol: 0,
+    prorrateo: 0
+  };
+  // Prorrateo de % excluidos (cálculo externo, Art. 490 ET): IVA de operaciones comunes × % ingresos excluidos
+  const comunIVA = arrendo19 + gastos19iva;
+  const ingTotalNet = ventas19b + ventas5b + ventasExclb + devVentas19b + devVentas5b + devVentas0b;
+  const exclNet = ventasExclb + devVentas0b;
+  const pctExcl = ingTotalNet!==0 ? exclNet/ingTotalNet : 0;
+  const prorrateoVal = comunIVA * pctExcl;
+  imp.prorrateo = prorrateoVal;
+  let sumImp=0; for(const k in imp) sumImp+=imp[k];
+  const ajuste = controlNeto - (sumImp - prorrateoVal);
+  imp.ajuste = ajuste;
+  const totalIva = controlNeto + prorrateoVal;
+  const prorrateoCalc = { comunIVA, comunIVAAuto:comunIVA, arrendo:arrendo19, gastosComunes, servicios:serviciosDesc, exclNet, ingTotalNet, pctExcl, prorrateo:prorrateoVal, deducible: comunIVA - prorrateoVal };
+
+  const ing = {
+    ventas19: ventas19b, ventas5: ventas5b, ventasExcl: ventasExclb,
+    devVentas19: devVentas19b, devVentas5: devVentas5b, devExcl: devVentas0b
+  };
+  ing.total = ing.ventas19+ing.ventas5+ing.ventasExcl+ing.devVentas19+ing.devVentas5+ing.devExcl;
+
+  const cmp = {
+    import19: import19/0.19, compras19: cB19, compras5: cB5, comprasExcl: cExcl+cExento,
+    gastos19: gastos19iva/0.19, arrendo19: arrendo19/0.19,
+    devCompra19: devCompra19b, devCompra5: devCompra5b, devCompra0: devCompra0b
+  };
+  cmp.total = cmp.import19+cmp.compras19+cmp.compras5+cmp.comprasExcl+cmp.gastos19+cmp.arrendo19+cmp.devCompra19+cmp.devCompra5+cmp.devCompra0;
+
+  const val = {
+    v19: g(a,"4135.02.03").cre, v5: g(a,"4135.02.02").cre,
+    checks: [
+      ["IVA generado 19%", gen19, g(a,"2408.05.02").cre],
+      ["IVA generado 5%", gen5, g(a,"2408.05.01").cre],
+      ["IVA DVV 19%", dvv19, g(a,"2408.15.05.02").deb],
+      ["IVA descontable compras 5%", cI5, g(a,"2408.10.01").deb],
+      ["IVA generado DVC 19%", dvc19, g(a,"2408.15.10.02").cre]
+    ]
+  };
+
+  const corte = `${String(per.d2).padStart(2,"0")}/${abbr}/${year}`;
+  const rango = `${String(per.d1).padStart(2,"0")}/${abbr}/${year} - ${String(per.d2).padStart(2,"0")}/${abbr}/${year}`;
+
+  return {
+    id:`${year}-${mes}-${tipo}`, year, mes, tipo, completo,
+    mesNombre:MESES[mes], corte, rango, cutDate:per,
+    ing, cmp, imp, totalIva, controlNeto, ajuste, prorrateoCalc,
+    rete16:{deb:rete16.deb,cre:rete16.cre,mov:rete16.deb+rete16.cre},
+    pagado20:{deb:pagado20.deb,cre:pagado20.cre},
+    val, savedAt:null
+  };
+}
+
+/* ===========================================================
+   DEFINICIÓN DE FILAS (para render y PDF)
+   =========================================================== */
+const DEF = {
+  ing:[
+    ["ventas19","Venta de Mercancías Gravadas 19%"],
+    ["ventas5","Venta de Mercancías Gravadas 5%"],
+    ["ventasExcl","Venta de Mercancías Excluidas 0%"],
+    ["devVentas19","Devoluciones en Ventas 19%"],
+    ["devVentas5","Devoluciones en Ventas 5%"],
+    ["devExcl","Devoluciones Excluidas 0%"]
+  ],
+  cmp:[
+    ["import19","Compras Importaciones Gravadas 19%"],
+    ["compras19","Compras Mercancías Gravadas 19%"],
+    ["compras5","Compras Mercancías Gravadas 5%"],
+    ["comprasExcl","Compras Excluidas 0%"],
+    ["gastos19","Gastos Descontables 19%"],
+    ["arrendo19","Descontable Servicios Arrendo 19%"],
+    ["devCompra19","Devoluciones en Compra 19%"],
+    ["devCompra5","Devoluciones en Compra 5%"],
+    ["devCompra0","Devoluciones en Compra 0%"]
+  ],
+  imp:[
+    ["ivaGen19","IVA Generado en Ventas 19%"],
+    ["ivaGen5","IVA Generado en Ventas 5%"],
+    ["ivaDescDVV19","IVA Descontable Dev. en Ventas 19%"],
+    ["ivaDescDVV5","IVA Descontable Dev. en Ventas 5%"],
+    ["ivaDescImport19","IVA Descontable Importaciones 19%"],
+    ["ivaDescCompras19","IVA Descontable en Compras 19%"],
+    ["ivaDescCompras5","IVA Descontable en Compras 5%"],
+    ["ivaGenDVC19","IVA Generado Dev. en Compras 19%"],
+    ["ivaGenDVC5","IVA Generado Dev. en Compras 5%"],
+    ["ivaGastos19","IVA en Gastos Descontable 19%"],
+    ["ivaArrendo19","IVA Descontable Servicios Arrendo 19%"],
+    ["reteTDTC","Retenciones de IVA en TD, TC"],
+    ["reteCaracol","Retenciones IVA Caracol"],
+    ["prorrateo","Prorrateo IVA % Excluidos"]
+  ]
+};
+
+/* ===========================================================
+   CONSOLIDADO: agrupa por mes (completo reemplaza fracciones)
+   =========================================================== */
+function monthData(){
+  // devuelve array[12] de modelos consolidados por mes (o null)
+  const byMonth = Array.from({length:12},()=>({completos:[],fracciones:[]}));
+  for(const k in state.periods){
+    const m=state.periods[k];
+    if(m.year!==2026 && Object.keys(state.periods).length) {/* permite otros años pero consolida por mes */}
+    (m.tipo==="completo"?byMonth[m.mes].completos:byMonth[m.mes].fracciones).push(m);
+  }
+  return byMonth.map(bucket=>{
+    let m=null;
+    if(bucket.completos.length){ m=bucket.completos[bucket.completos.length-1]; }
+    else if(bucket.fracciones.length){ m=sumModels(bucket.fracciones); }
+    return m?recomputeProrrateo(m):null;
+  });
+}
+function recomputeProrrateo(m){
+  if(!m || m.closed) return m;                               // no tocar periodos cerrados/presentados
+  if(m.prorrateoCalc && m.prorrateoCalc.manual) return m;    // respetar ajuste manual
+  const comun = -(m.imp.ivaArrendo19||0) - (m.imp.ivaGastos19||0);
+  const pctExcl = m.ing.total ? (m.ing.ventasExcl+m.ing.devExcl)/m.ing.total : 0;
+  const pror = comun*pctExcl;
+  m.imp.prorrateo = pror;
+  m.totalIva = m.controlNeto + pror;
+  m.prorrateoCalc = {comunIVA:comun,comunIVAAuto:comun,exclNet:m.ing.ventasExcl+m.ing.devExcl,ingTotalNet:m.ing.total,pctExcl,prorrateo:pror,deducible:comun-pror,manual:false};
+  return m;
+}
+function sumModels(list){
+  if(list.length===1) return list[0];
+  const base=JSON.parse(JSON.stringify(list[0]));
+  const addObj=(dst,src)=>{for(const kk in src){ if(typeof src[kk]==="number") dst[kk]=(dst[kk]||0)+src[kk]; }};
+  for(let i=1;i<list.length;i++){
+    addObj(base.ing,list[i].ing); addObj(base.cmp,list[i].cmp); addObj(base.imp,list[i].imp);
+    base.totalIva+=list[i].totalIva; base.controlNeto+=list[i].controlNeto; base.ajuste+=list[i].ajuste;
+    base.rete16.mov+=list[i].rete16.mov;
+  }
+  base.tipo="fraccion"; base.completo=false; base.rango="varias fracciones";
+  // corte = el mayor
+  base.corte=list.map(x=>x.corte).sort().pop();
+  return base;
+}
+
+/* ===========================================================
+   RENDER
+   =========================================================== */
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+function render(){
+  renderMesCards();
+  renderCons();
+  renderAnio();
+  renderMes();
+  renderProy();
+  renderObs();
+  const eff=effectiveCorte();
+  const inp=document.getElementById("corteInput");
+  if(inp && document.activeElement!==inp) inp.value = eff||"";
+  const au=document.getElementById("corteAuto"); if(au) au.style.display = state.corteOverride?"inline-block":"none";
+  const ov=document.getElementById("obsCorteVal"); if(ov) ov.textContent = eff||"—";
+}
+
+function combineMonths(idxs){
+  const md=monthData();
+  const list=idxs.filter(i=>md[i]).map(i=>md[i]);
+  if(!list.length) return null;
+  if(list.length===1) return JSON.parse(JSON.stringify(list[0]));
+  const base=JSON.parse(JSON.stringify(list[0]));
+  const add=(dst,src)=>{for(const k in src)if(typeof src[k]==="number")dst[k]=(dst[k]||0)+src[k];};
+  for(let i=1;i<list.length;i++){ add(base.ing,list[i].ing);add(base.cmp,list[i].cmp);add(base.imp,list[i].imp);
+    base.totalIva+=list[i].totalIva;base.controlNeto+=list[i].controlNeto;base.ajuste+=list[i].ajuste;
+    base.rete16.mov+=list[i].rete16.mov;base.rete16.deb+=list[i].rete16.deb;base.rete16.cre+=list[i].rete16.cre;}
+  const names=idxs.filter(i=>md[i]).map(i=>MESES[i].slice(0,1)+MESES[i].slice(1,3).toLowerCase());
+  base.mesNombre=names.join(" + ");
+  base.multi=true; base.tipo=list.every(x=>x.tipo==='completo')?'completo':'mixto';
+  base.rango=`${list.length} meses`; base.closed=false; base.id=`sel:${idxs.join(",")}`;
+  base.corte=list.map(x=>x.corte).sort((a,b)=>corteKey(a)-corteKey(b)).pop();
+  return base;
+}
+function renderMesCards(){
+  const md=monthData();
+  const any=md.some(x=>x);
+  const wrap=document.getElementById("mesCardsWrap"); if(wrap) wrap.hidden=!any;
+  const el=document.getElementById("mesCards"); if(!el) return;
+  let out="";
+  for(let i=0;i<12;i++){
+    const m=md[i];
+    const nm=MESES[i].slice(0,1)+MESES[i].slice(1).toLowerCase();
+    if(m){
+      const active = selMonths.includes(i);
+      out+=`<div class="month-card has ${active?'active':''}" data-vmon="${i}">`+
+        `<button class="mc-del" data-dmon="${i}" title="Eliminar ${nm}"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`+
+        `<div class="mc-mo">${nm}</div><div class="mc-tot num">${money3(m.totalIva)}</div>`+
+        `<div class="mc-chips"><span class="chip ${m.tipo==='completo'?'c':'f'}">${m.tipo==='completo'?'Completo':'Fracción'}</span>${m.closed?'<span class="chip" style="background:var(--lav);color:var(--lav-ink)">Present.</span>':''}</div>`+
+        `</div>`;
+    }else{
+      out+=`<div class="month-card empty"><div class="mc-mo">${nm}</div><div class="mc-empty">Sin datos</div></div>`;
+    }
+  }
+  el.innerHTML=out;
+}
+
+function kpiCard(lab,val,sub,accent){
+  return `<div class="kpi ${accent?'accent':''}"><div class="lab">${lab}</div><div class="val num">${val}</div>${sub?`<div class="sub">${sub}</div>`:''}</div>`;
+}
+
+function renderCons(){
+  const md=monthData();
+  const any=md.some(x=>x);
+  document.getElementById("consEmpty").hidden=any;
+  document.getElementById("consBody").hidden=!any;
+  if(!any) return;
+  if(uiCuat===null) uiCuat=defaultCuat(md);
+  document.querySelectorAll("#cuatSeg .seg-btn").forEach(b=>b.setAttribute("aria-selected",(+b.dataset.cuat===uiCuat)?"true":"false"));
+  const months=Q[uiCuat].filter(mi=>md[mi]);
+  let ingA=0,comA=0,ivaA=0,genA=0,descA=0;
+  months.forEach(mi=>{const m=md[mi];ingA+=m.ing.total;comA+=m.cmp.total;ivaA+=m.totalIva;
+    genA+=m.imp.ivaGen19+m.imp.ivaGen5+m.imp.ivaGenDVC19+m.imp.ivaGenDVC5;
+    descA+=-(m.imp.ivaDescDVV19+m.imp.ivaDescDVV5+m.imp.ivaDescImport19+m.imp.ivaDescCompras19+m.imp.ivaDescCompras5+m.imp.ivaGastos19+m.imp.ivaArrendo19);});
+  document.getElementById("consTitle").innerHTML=`${QLBL[uiCuat]} <span class="pill">${months.length} mes(es) con datos · corte ${effectiveCorte()||"—"}</span>`;
+  document.getElementById("consKpis").innerHTML=
+    kpiCard("Total ingresos",money(ingA))+kpiCard("Total compras",money(comA))+
+    kpiCard("IVA generado",money(genA))+kpiCard("IVA descontable",money(descA))+
+    kpiCard("IVA del cuatrimestre",money3(ivaA),QLBL[uiCuat],true);
+  const netT=(obj,keys)=>months.reduce((s,mi)=>s+keys.reduce((a,k)=>a+md[mi][obj][k],0),0);
+  document.getElementById("consPct").innerHTML=[
+    ["Ventas netas 19%",netT("ing",["ventas19","devVentas19"]),"v"],
+    ["Ventas netas 5%",netT("ing",["ventas5","devVentas5"]),"v"],
+    ["Ventas netas 0%",netT("ing",["ventasExcl","devExcl"]),"v"],
+    ["Compras netas 19%",netT("cmp",["compras19","devCompra19"]),"c"],
+    ["Compras netas 5%",netT("cmp",["compras5","devCompra5"]),"c"],
+    ["Compras netas 0%",netT("cmp",["comprasExcl","devCompra0"]),"c"]
+  ].map(d=>`<div class="pct-card ${d[2]}"><div class="pc-lab">${d[0]}</div><div class="pc-val">${money(d[1])}</div></div>`).join("");
+  if(!months.length){
+    document.getElementById("consTable").innerHTML=`<thead><tr><th>Cuenta / Concepto</th><th class="cuat">Cuatrimestre</th></tr></thead><tbody><tr><td class="muted" style="padding:16px">Sin datos cargados en este cuatrimestre todavía.</td><td class="num z">—</td></tr></tbody>`;
+    if(charts.cvc)charts.cvc.destroy(); if(charts.civa)charts.civa.destroy(); charts.cvc=charts.civa=null;
+    return;
+  }
+  const tot=(obj,key)=>months.reduce((s,mi)=>s+md[mi][obj][key],0);
+  const totI=(key)=>months.reduce((s,mi)=>s+md[mi].imp[key],0);
+  let hh=`<thead><tr><th>Cuenta / Concepto</th>`;
+  months.forEach(mi=>hh+=`<th>${MESES[mi].slice(0,3)}</th>`);
+  hh+=`<th class="cuat">Cuatrimestre</th></tr></thead><tbody>`;
+  const row=(obj,key,label)=>{let r=`<tr><td>${label}</td>`;months.forEach(mi=>r+=moneyNeg(md[mi][obj][key]));r+=`<td class="num cuat">${money(tot(obj,key))}</td></tr>`;return r;};
+  const netCell=(obj,keys,mi)=>keys.reduce((s,k)=>s+md[mi][obj][k],0);
+  const netRow=(label,obj,keys)=>{let r=`<tr class="net"><td>${label}</td>`;months.forEach(mi=>r+=moneyNeg(netCell(obj,keys,mi)));r+=`<td class="num cuat">${money(months.reduce((s,mi)=>s+netCell(obj,keys,mi),0))}</td></tr>`;return r;};
+  hh+=`<tr class="grp ing"><td>INGRESOS OPERACIONALES</td>${"<td></td>".repeat(months.length+1)}</tr>`;
+  hh+=row("ing","ventas19","Venta de Mercancías Gravadas 19%");
+  hh+=row("ing","devVentas19","Devoluciones en Ventas 19%");
+  hh+=netRow("Ingreso neto 19%","ing",["ventas19","devVentas19"]);
+  hh+=row("ing","ventas5","Venta de Mercancías Gravadas 5%");
+  hh+=row("ing","devVentas5","Devoluciones en Ventas 5%");
+  hh+=netRow("Ingreso neto 5%","ing",["ventas5","devVentas5"]);
+  hh+=row("ing","ventasExcl","Venta de Mercancías Excluidas 0%");
+  hh+=row("ing","devExcl","Devoluciones Excluidas 0%");
+  hh+=netRow("Ingreso neto 0%","ing",["ventasExcl","devExcl"]);
+  hh+=`<tr class="total"><td>TOTAL INGRESOS</td>`;months.forEach(mi=>hh+=`<td class="num">${money(md[mi].ing.total)}</td>`);hh+=`<td class="num cuat">${money(tot("ing","total"))}</td></tr>`;
+  hh+=`<tr class="grp com"><td>COMPRAS DE MERCANCÍAS</td>${"<td></td>".repeat(months.length+1)}</tr>`;
+  hh+=row("cmp","import19","Compras Importaciones Gravadas 19%");
+  hh+=row("cmp","compras19","Compras Mercancías Gravadas 19%");
+  hh+=row("cmp","devCompra19","Devoluciones en Compra 19%");
+  hh+=netRow("Compra neta 19%","cmp",["compras19","devCompra19"]);
+  hh+=row("cmp","compras5","Compras Mercancías Gravadas 5%");
+  hh+=row("cmp","devCompra5","Devoluciones en Compra 5%");
+  hh+=netRow("Compra neta 5%","cmp",["compras5","devCompra5"]);
+  hh+=row("cmp","comprasExcl","Compras Excluidas 0%");
+  hh+=row("cmp","devCompra0","Devoluciones en Compra 0%");
+  hh+=netRow("Compra neta 0%","cmp",["comprasExcl","devCompra0"]);
+  hh+=row("cmp","gastos19","Gastos Descontables 19%");
+  hh+=row("cmp","arrendo19","Descontable Servicios Arrendo 19%");
+  hh+=`<tr class="total"><td>TOTAL COMPRAS</td>`;months.forEach(mi=>hh+=`<td class="num">${money(md[mi].cmp.total)}</td>`);hh+=`<td class="num cuat">${money(tot("cmp","total"))}</td></tr>`;
+  hh+=`<tr class="grp imp"><td>IMPUESTOS</td>${"<td></td>".repeat(months.length+1)}</tr>`;
+  DEF.imp.forEach(([k,l])=>{let r=`<tr><td>${l}</td>`;months.forEach(mi=>r+=moneyNeg(md[mi].imp[k]));r+=`<td class="num cuat">${money(totI(k))}</td></tr>`;hh+=r;});
+  hh+=`<tr class="grand"><td>TOTAL IVA DEL PERIODO</td>`;months.forEach(mi=>hh+=`<td class="num">${money(md[mi].totalIva)}</td>`);hh+=`<td class="num iva-cuat ${ivaColorClass(ivaA)}">${money3(ivaA)}</td></tr></tbody>`;
+  document.getElementById("consTable").innerHTML=hh;
+  document.getElementById("chVCtitle").textContent=`Ventas vs Compras · ${QLBL[uiCuat]}`;
+  document.getElementById("chIVAtitle").textContent=`IVA Generado y Descontable · ${QLBL[uiCuat]}`;
+  drawChartPair("c","chVC","chIVA",months.map(mi=>md[mi]),months.map(mi=>MESES[mi].slice(0,3)));
+}
+
+
+function chartDatasets(mdSlice){
+  return {
+    ventas:mdSlice.map(m=>m?Math.round(m.ing.total):null),
+    compras:mdSlice.map(m=>m?Math.round(m.cmp.total):null),
+    gen:mdSlice.map(m=>m?Math.round(m.imp.ivaGen19+m.imp.ivaGen5+m.imp.ivaGenDVC19+m.imp.ivaGenDVC5):null),
+    desc:mdSlice.map(m=>m?Math.round(-(m.imp.ivaDescDVV19+m.imp.ivaDescDVV5+m.imp.ivaDescImport19+m.imp.ivaDescCompras19+m.imp.ivaDescCompras5+m.imp.ivaGastos19+m.imp.ivaArrendo19)):null)
+  };
+}
+function chartOpts(){ const cs=getComputedStyle(document.documentElement);const ink=cs.getPropertyValue('--ink-soft').trim();const grid=cs.getPropertyValue('--line').trim();
+  return {responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:ink,font:{family:"Inter",size:11},boxWidth:12,boxHeight:12}}},scales:{x:{ticks:{color:ink,font:{size:10}},grid:{display:false}},y:{ticks:{color:ink,font:{size:10},callback:v=>fmt0.format(v)},grid:{color:grid}}}}; }
+function drawChartPair(prefix,vcId,ivaId,mdSlice,labels){
+  const d=chartDatasets(mdSlice), kVC=prefix+"vc", kIVA=prefix+"iva";
+  if(charts[kVC])charts[kVC].destroy();
+  charts[kVC]=new Chart(document.getElementById(vcId),{type:"bar",data:{labels,datasets:[{label:"Ventas",data:d.ventas,backgroundColor:"#9bd4b4",borderRadius:5},{label:"Compras",data:d.compras,backgroundColor:"#bda9ec",borderRadius:5}]},options:chartOpts()});
+  if(charts[kIVA])charts[kIVA].destroy();
+  charts[kIVA]=new Chart(document.getElementById(ivaId),{type:"bar",data:{labels,datasets:[{label:"IVA Generado",data:d.gen,backgroundColor:"#f0b090",borderRadius:5},{label:"IVA Descontable",data:d.desc,backgroundColor:"#8fc0ea",borderRadius:5}]},options:chartOpts()});
+}
+
+function renderAnio(){
+  const md=monthData();
+  const any=md.some(x=>x);
+  document.getElementById("anioEmpty").hidden=any;
+  document.getElementById("anioBody").hidden=!any;
+  if(!any) return;
+  let ingA=0,comA=0,ivaA=0,genA=0,descA=0;
+  md.forEach(m=>{if(!m)return;ingA+=m.ing.total;comA+=m.cmp.total;ivaA+=m.totalIva;
+    genA+=m.imp.ivaGen19+m.imp.ivaGen5+m.imp.ivaGenDVC19+m.imp.ivaGenDVC5;
+    descA+=-(m.imp.ivaDescDVV19+m.imp.ivaDescDVV5+m.imp.ivaDescImport19+m.imp.ivaDescCompras19+m.imp.ivaDescCompras5+m.imp.ivaGastos19+m.imp.ivaArrendo19);});
+  const nMes=md.filter(x=>x).length;
+  document.getElementById("anioKpis").innerHTML=
+    kpiCard("Total ingresos año",money(ingA))+kpiCard("Total compras año",money(comA))+
+    kpiCard("IVA generado",money(genA))+kpiCard("IVA descontable",money(descA))+
+    kpiCard("IVA del año",money(ivaA),`${nMes} mes(es) con datos`,true);
+  const qtot=qi=>Q[qi].reduce((s,mi)=>s+(md[mi]?md[mi].totalIva:0),0);
+  const csub=["Ene – Abr · pagar en mayo","May – Ago · pagar en septiembre","Sep – Dic · pagar en enero"];
+  document.getElementById("cuatCards").innerHTML=[0,1,2].map(qi=>
+    `<div class="cuat-card c${qi+1}"><div class="cc-lab">${["1er","2do","3er"][qi]} cuatrimestre</div><div class="cc-val">${money3(qtot(qi))}</div><div class="cc-sub">${csub[qi]}</div></div>`).join("");
+  document.getElementById("paidCards").innerHTML=[0,1,2].map(qi=>
+    `<div class="paid-card"><div class="pc-lab">IVA pagado ${["1er","2do","3er"][qi]} cuatrimestre 2025</div><input type="text" inputmode="numeric" data-paid="${qi}" value="${fmt0.format(state.paid2025[qi]||0)}"></div>`).join("");
+  const netY=(obj,keys)=>[...Array(12).keys()].reduce((s,mi)=>s+(md[mi]?keys.reduce((a,k)=>a+md[mi][obj][k],0):0),0);
+  document.getElementById("anioPct").innerHTML=[
+    ["Ventas netas 19%",netY("ing",["ventas19","devVentas19"]),"v"],
+    ["Ventas netas 5%",netY("ing",["ventas5","devVentas5"]),"v"],
+    ["Ventas netas 0%",netY("ing",["ventasExcl","devExcl"]),"v"],
+    ["Compras netas 19%",netY("cmp",["compras19","devCompra19"]),"c"],
+    ["Compras netas 5%",netY("cmp",["compras5","devCompra5"]),"c"],
+    ["Compras netas 0%",netY("cmp",["comprasExcl","devCompra0"]),"c"]
+  ].map(d=>`<div class="pct-card ${d[2]}"><div class="pc-lab">${d[0]}</div><div class="pc-val">${money(d[1])}</div></div>`).join("");
+  const cols=[...Array(12).keys()];
+  const ysum=(obj,key)=>cols.reduce((s,mi)=>s+(md[mi]?md[mi][obj][key]:0),0);
+  const yI=key=>cols.reduce((s,mi)=>s+(md[mi]?md[mi].imp[key]:0),0);
+  let hh=`<thead><tr><th>Cuenta / Concepto</th>`;
+  MESES.forEach(mo=>hh+=`<th>${mo.slice(0,3)}</th>`);
+  hh+=`<th>TOTAL</th></tr></thead><tbody>`;
+  const dr=(obj,key,label)=>{let r=`<tr><td>${label}</td>`;cols.forEach(mi=>r+=moneyNeg(md[mi]?md[mi][obj][key]:0));r+=`<td class="num">${money(ysum(obj,key))}</td></tr>`;return r;};
+  hh+=`<tr class="grp ing"><td>INGRESOS OPERACIONALES</td>${"<td></td>".repeat(13)}</tr>`;
+  DEF.ing.forEach(([k,l])=>hh+=dr("ing",k,l));
+  hh+=`<tr class="total"><td>TOTAL INGRESOS</td>`;cols.forEach(mi=>hh+=`<td class="num">${money(md[mi]?md[mi].ing.total:0)}</td>`);hh+=`<td class="num">${money(ysum("ing","total"))}</td></tr>`;
+  hh+=`<tr class="grp com"><td>COMPRAS DE MERCANCÍAS</td>${"<td></td>".repeat(13)}</tr>`;
+  DEF.cmp.forEach(([k,l])=>hh+=dr("cmp",k,l));
+  hh+=`<tr class="total"><td>TOTAL COMPRAS</td>`;cols.forEach(mi=>hh+=`<td class="num">${money(md[mi]?md[mi].cmp.total:0)}</td>`);hh+=`<td class="num">${money(ysum("cmp","total"))}</td></tr>`;
+  hh+=`<tr class="grp imp"><td>IMPUESTOS</td>${"<td></td>".repeat(13)}</tr>`;
+  DEF.imp.forEach(([k,l])=>{let r=`<tr><td>${l}</td>`;cols.forEach(mi=>r+=moneyNeg(md[mi]?md[mi].imp[k]:0));r+=`<td class="num">${money(yI(k))}</td></tr>`;hh+=r;});
+  hh+=`<tr class="grand"><td>TOTAL IVA DEL PERIODO</td>`;cols.forEach(mi=>hh+=`<td class="num">${money(md[mi]?md[mi].totalIva:0)}</td>`);hh+=`<td class="num">${money(ivaA)}</td></tr></tbody>`;
+  document.getElementById("anioTable").innerHTML=hh;
+  drawChartPair("y","chVCy","chIVAy",md,MESES.map(m=>m.slice(0,3)));
+}
+
+
+function renderMes(){
+  const anyData=monthData().some(x=>x);
+  const m=currentModel;
+  document.getElementById("mesEmpty").hidden=anyData;
+  document.getElementById("mesBody").hidden=!m;
+  if(!m) return;
+  const saved = !!state.periods[m.id];
+  const tName = m.multi ? m.mesNombre : (m.mesNombre.slice(0,1)+m.mesNombre.slice(1).toLowerCase());
+  document.getElementById("mesTitle").innerHTML = m.multi
+    ? `Reporte · ${tName} ${m.year} <span class="chip" style="background:var(--sky);color:var(--sky-ink)">${esc(m.rango)} seleccionados</span>`
+    : `Reporte · ${tName} ${m.year} `+
+      `<span class="chip ${m.tipo==='completo'?'c':'f'}">${m.tipo==='completo'?'Mes completo':'Fracción '+esc(m.rango)}</span>`+
+      (m.closed?` <span class="chip" style="background:var(--lav);color:var(--lav-ink)">Presentado</span>`:'')+
+      (saved?'':` <span class="pill" style="background:var(--butter);color:var(--butter-ink)">sin grabar</span>`);
+
+  const ivaGen=m.imp.ivaGen19+m.imp.ivaGen5+m.imp.ivaGenDVC19+m.imp.ivaGenDVC5;
+  const ivaDesc=-(m.imp.ivaDescDVV19+m.imp.ivaDescDVV5+m.imp.ivaDescImport19+m.imp.ivaDescCompras19+m.imp.ivaDescCompras5+m.imp.ivaGastos19+m.imp.ivaArrendo19);
+  document.getElementById("mesKpis").innerHTML=
+    kpiCard("Total ingresos",money(m.ing.total))+
+    kpiCard("Total compras",money(m.cmp.total))+
+    kpiCard("IVA generado",money(ivaGen))+
+    kpiCard("IVA descontable",money(ivaDesc))+
+    kpiCard("TOTAL IVA del periodo",money(m.totalIva),"movimiento neto cuenta 2408",true);
+
+  let h=`<thead><tr><th>Cuenta / Concepto</th><th>Base</th><th>Valor IVA</th></tr></thead><tbody>`;
+  // Ingresos
+  h+=`<tr class="grp ing"><td>INGRESOS OPERACIONALES</td><td></td><td></td></tr>`;
+  DEF.ing.forEach(([k,l])=>h+=`<tr><td>${l}</td>${moneyNeg(m.ing[k])}<td class="num z">—</td></tr>`);
+  h+=`<tr class="total"><td>TOTAL INGRESOS</td><td class="num">${money(m.ing.total)}</td><td></td></tr>`;
+  // Compras
+  h+=`<tr class="grp com"><td>COMPRAS DE MERCANCÍAS</td><td></td><td></td></tr>`;
+  DEF.cmp.forEach(([k,l])=>h+=`<tr><td>${l}</td>${moneyNeg(m.cmp[k])}<td class="num z">—</td></tr>`);
+  h+=`<tr class="total"><td>TOTAL COMPRAS</td><td class="num">${money(m.cmp.total)}</td><td></td></tr>`;
+  // Impuestos (base col vacía, IVA con valor)
+  h+=`<tr class="grp imp"><td>IMPUESTOS</td><td></td><td></td></tr>`;
+  DEF.imp.forEach(([k,l])=>h+=`<tr><td>${l}</td><td class="num z">—</td>${moneyNeg(m.imp[k])}</tr>`);
+  if(Math.abs(m.imp.ajuste)>=1) h+=`<tr><td>Ajuste de cuadre (revisar mapeo de cuentas)</td><td class="num z">—</td>${moneyNeg(m.imp.ajuste)}</tr>`;
+  h+=`<tr class="grand"><td>TOTAL IVA DEL PERIODO</td><td></td><td class="num">${money(m.totalIva)}</td></tr>`;
+  h+=`</tbody>`;
+  document.getElementById("mesTable").innerHTML=h;
+
+  // reconciliación
+  const okRec = Math.abs(m.ajuste)<1;
+  let pc = m.prorrateoCalc;
+  if(!pc){ const px=(m.ing.total?(m.ing.ventasExcl+m.ing.devExcl)/m.ing.total:0); const ci=-(m.imp.ivaArrendo19||0)-(m.imp.ivaGastos19||0); const pr=(m.imp.prorrateo||0); pc={comunIVA:ci,comunIVAAuto:ci,pctExcl:px,prorrateo:pr,deducible:ci-pr,exclNet:m.ing.ventasExcl+m.ing.devExcl,ingTotalNet:m.ing.total}; }
+  const hasPror = Math.abs(pc.prorrateo)>=1;
+  const editPror = !m.multi;
+  document.getElementById("mesRecon").innerHTML=
+    `<div class="alert ${okRec?'ok':'warn'}"><div class="ic">`+
+    (okRec?`<svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+          :`<svg viewBox="0 0 24 24" fill="none"><path d="M12 8v5m0 3h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/></svg>`)+
+    `</div><div><h4>${okRec?'Cuadre verificado':'Diferencia de cuadre'}</h4>`+
+    `<p>El detalle contable del IVA suma <b>${money(m.controlNeto)}</b>, igual al movimiento neto (Crédito − Débito) de la cuenta <b>2408</b>`+
+    (okRec?'.':` pero hay una diferencia de <b>${money(m.ajuste)}</b>. Revisa cuentas no mapeadas o pagos en 2408.20.`)+
+    (hasPror?` Sumado el <b>prorrateo de % excluidos</b> de <b>${money(pc.prorrateo)}</b> (cálculo externo), el <b>IVA a declarar</b> es <b>${money(m.totalIva)}</b>.`:'')+
+    (m.pagado20 && (m.pagado20.deb||m.pagado20.cre)?` Movimiento en 2408.20 (IVA pagado): ${money(m.pagado20.deb-m.pagado20.cre)}.`:'')+
+    `</p></div></div>`
+    + (`<div class="val-checks"><h4>Prorrateo de % excluidos — cálculo externo (Art. 490 ET)</h4>`+
+        `<p class="muted" style="font-size:12px;margin:-4px 0 10px">El IVA de operaciones comunes se toma <b>automáticamente del balance</b> (arrendo 2408.10.03 + gastos comunes 2408.10.04 + servicios 2408.10.06) y se multiplica por el % de ingresos excluidos.${editPror?' Si necesitas, puedes ajustarlo manualmente con ✏.':''}</p><div class="vc-grid">`+
+        `<div class="vc-item ok"><span class="vc-l">IVA operaciones comunes — ${pc.manual?'<b>ajustado a mano</b>':'automático del balance'}</span><span class="vc-v num">${money(pc.comunIVA)}</span>${editPror?`<span class="vc-s"><button class="pror-btn" data-prac="edit" title="Ajustar manualmente">✏</button>${pc.manual?`<button class="pror-btn" data-prac="auto" title="Volver al automático del balance">↺ auto</button>`:''}</span>`:''}</div>`+
+        `<div class="vc-item ok"><span class="vc-l">% ingresos excluidos</span><span class="vc-v">${(pc.pctExcl*100).toFixed(2)}%</span></div>`+
+        `<div class="vc-item ${hasPror?'bad':'ok'}"><span class="vc-l">Prorrateo a gasto (se suma al IVA)</span><span class="vc-v num">${money(pc.prorrateo)}</span><span class="vc-s">+</span></div>`+
+        `<div class="vc-item ok"><span class="vc-l">IVA común deducible</span><span class="vc-v num">${money(pc.deducible)}</span></div>`+
+      `</div></div>`)
+    + ((m.val&&m.val.checks&&m.val.checks.length)?(`<div class="val-checks"><h4>Validación de reportes contra el balance</h4><div class="vc-grid">`+m.val.checks.map(c=>{const ok=Math.abs(c[1]-c[2])<1;return `<div class="vc-item ${ok?'ok':'bad'}"><span class="vc-l">${c[0]}</span><span class="vc-v num">${money(c[1])}</span><span class="vc-s">${ok?'✓':'≠ bal '+money(c[2])}</span></div>`;}).join("")+`</div></div>`):'');
+}
+
+function renderObs(){
+  const md=monthData();
+  const any=md.some(x=>x);
+  document.getElementById("obsEmpty").hidden=any;
+  document.getElementById("obsBody").hidden=!any;
+  document.getElementById("obsNotesWrap").hidden=!any;
+  const ov=document.getElementById("obsCorteVal"); if(ov) ov.textContent=effectiveCorte()||"—";
+  if(!any){ document.getElementById("obsScope").textContent="—"; return; }
+  if(uiObsCuat===null) uiObsCuat=defaultCuat(md);
+  document.querySelectorAll("#obsCuatSeg .seg-btn").forEach(b=>b.setAttribute("aria-selected",(+b.dataset.ocuat===uiObsCuat)?"true":"false"));
+  const withData=Q[uiObsCuat].filter(mi=>md[mi]);
+  if(uiObsMes!==null && !withData.includes(uiObsMes)) uiObsMes=null;
+  if(uiObsMes===null && withData.length) uiObsMes=withData[withData.length-1];
+  const sel=document.getElementById("obsMesSel");
+  sel.innerHTML=`<option value="all">Todo el cuatrimestre</option>`+withData.map(mi=>`<option value="${mi}">${MESES[mi].slice(0,1)+MESES[mi].slice(1).toLowerCase()}</option>`).join("");
+  sel.value = uiObsMes!==null ? String(uiObsMes) : "all";
+  const items = uiObsMes!==null ? [md[uiObsMes]] : withData.map(mi=>md[mi]);
+  document.getElementById("obsScope").textContent = uiObsMes!==null
+    ? `${MESES[uiObsMes].slice(0,1)+MESES[uiObsMes].slice(1).toLowerCase()} ${items[0].year}`
+    : `${QLBL[uiObsCuat]}`;
+  const proy=cfg.proy,bmin=cfg.min,bmax=cfg.max;
+  const totalScope=items.reduce((s,m)=>s+m.totalIva,0), nS=items.length;
+  const diff=totalScope-proy*nS;
+  let out=`<div class="kpis">`+
+    kpiCard("IVA del alcance",money(totalScope),`${nS} mes(es)`)+
+    kpiCard("Proyección",money(proy*nS),`${nS} × ${money(proy)}`)+
+    kpiCard(diff>0?"Por encima de lo proyectado":"Dentro de lo proyectado",money(diff),"",true)+
+    `</div>`;
+  items.sort((a,b)=>(a.year-b.year)||(a.mes-b.mes));
+  items.forEach(m=>out+=buildAlerts(m,proy,bmin,bmax));
+  document.getElementById("obsBody").innerHTML=out;
+  document.getElementById("obsNotes").value = state.notes[noteKey()]||"";
+}
+function noteKey(){
+  const md=monthData();
+  if(uiObsMes!==null && md[uiObsMes]) return `mes:${md[uiObsMes].year}-${uiObsMes}`;
+  return `cuat:2026-${uiObsCuat}`;
+}
+function buildAlerts(m,proy,bmin,bmax){
+  const mn=`${m.mesNombre.slice(0,1)+m.mesNombre.slice(1).toLowerCase()} ${m.year}`;
+  const parcial=m.tipo!=="completo";
+  let out=`<h2 class="sec" style="margin-top:18px">${mn} ${parcial?'<span class="pill" style="background:var(--butter);color:var(--butter-ink)">parcial / fracción</span>':''}${m.closed?' <span class="pill" style="background:var(--lav);color:var(--lav-ink)">presentado</span>':''}</h2>`;
+  if(m.totalIva>proy){
+    out+=alertHTML("warn","IVA por encima de lo proyectado",
+      `El IVA del periodo es <b>${money(m.totalIva)}</b>, <b>superior</b> a la proyección de <b>${money(proy)}</b> (exceso de <b>${money(m.totalIva-proy)}</b>).`+(parcial?` Es una fracción; el mes completo podría ser mayor.`:''));
+  }else{
+    out+=alertHTML("ok","IVA dentro de lo proyectado",
+      `El IVA del periodo es <b>${money(m.totalIva)}</b>, dentro de la proyección de <b>${money(proy)}</b> (margen de <b>${money(proy-m.totalIva)}</b>).`);
+  }
+  const v0=m.ing.ventasExcl,c0=m.cmp.comprasExcl,rel=v0-c0;
+  if(rel<0){
+    out+=alertHTML("bad","Relación negativa en mercancía del 0%",
+      `Ventas 0% (<b>${money(v0)}</b>) menores que compras 0% (<b>${money(c0)}</b>). Diferencia <b>${money(rel)}</b>. Se esperaba positiva entre ${money(bmin)} y ${money(bmax)}.`);
+  }else if(rel<bmin){
+    out+=alertHTML("warn","Relación 0% por debajo de lo esperado",
+      `Ventas − compras del 0% = <b>${money(rel)}</b>, <b>menor</b> al mínimo de <b>${money(bmin)}</b>. (Ventas 0%: ${money(v0)} · Compras 0%: ${money(c0)})`);
+  }else if(rel>bmax){
+    out+=alertHTML("warn","Relación 0% por encima de lo esperado",
+      `Ventas − compras del 0% = <b>${money(rel)}</b>, <b>superior</b> al máximo de <b>${money(bmax)}</b>. (Ventas 0%: ${money(v0)} · Compras 0%: ${money(c0)})`);
+  }else{
+    out+=alertHTML("ok","Relación del 0% correcta",
+      `Ventas − compras del 0% = <b>${money(rel)}</b>, dentro de la banda (${money(bmin)} – ${money(bmax)}).`);
+  }
+  if(!m.rete16||m.rete16.mov===0){
+    out+=alertHTML("bad","ReteIVA 2408.16 sin contabilizar",
+      `No se registró movimiento del <b>ReteIVA descontable (cuenta 2408.16)</b> en el periodo. Verifica con la administración que se haya contabilizado la retención de IVA en ventas con TC/TD.`);
+  }else{
+    out+=alertHTML("ok","ReteIVA 2408.16 contabilizado",
+      `La cuenta 2408.16 registra movimiento por <b>${money(m.rete16.deb-m.rete16.cre)}</b> en el periodo.`);
+  }
+  return out;
+}
+function alertHTML(type,title,body){
+  const ic={ok:`<path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>`,
+    warn:`<path d="M12 9v4m0 4h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6A2 2 0 0022 18L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`,
+    bad:`<path d="M12 8v5m0 3h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>`}[type];
+  return `<div class="alert ${type}"><div class="ic"><svg viewBox="0 0 24 24" fill="none">${ic}</svg></div><div><h4>${title}</h4><p>${body}</p></div></div>`;
+}
+
+/* ===========================================================
+   EVENTOS / UI
+   =========================================================== */
+function toast(msg,kind){ const t=document.getElementById("toast"); t.textContent=msg; t.className="toast on "+(kind||""); setTimeout(()=>t.className="toast",2600); }
+
+// proyección (funciones)
+function proyDays(m){
+  const mm=String(m.rango||"").match(/(\d+)\s*\/\s*\w+\s*\/\s*\d+\s*-\s*(\d+)/);
+  const d2=mm?+mm[2]:lastDay(m.year,m.mes), d1=mm?+mm[1]:1;
+  const total=lastDay(m.year,m.mes);
+  const elapsed=Math.max(1,d2-d1+1), remaining=Math.max(0,total-d2);
+  return {d1,d2,total,elapsed,remaining};
+}
+function getProyO(mi){
+  const key=`2026-${mi}`; let o=state.proy[key];
+  if(!o||typeof o!=="object") o={};
+  if(typeof o.fV!=="number")o.fV=0; if(typeof o.fC!=="number")o.fC=0;
+  if(!o.f||typeof o.f!=="object") o.f={};
+  ['v19','v5','v0','c19','c5','c0'].forEach(k=>{ if(typeof o.f[k]!=="number")o.f[k]=0; });
+  if(!o.ov||typeof o.ov!=="object")o.ov={};
+  state.proy[key]=o; return o;
+}
+function proyRemain(m,side,b,o){
+  const dd=proyDays(m), ratio=dd.elapsed>0?dd.remaining/dd.elapsed:0, key=side+b;
+  if(o.ov && o.ov[key]!=null) return o.ov[key];
+  const real=side==='v'?(b==='19'?m.ing.ventas19:b==='5'?m.ing.ventas5:m.ing.ventasExcl)
+                       :(b==='19'?m.cmp.compras19:b==='5'?m.cmp.compras5:m.cmp.comprasExcl);
+  return real*ratio*(1+(o.f[key]||0)/100);
+}
+function computeProy(m,o){
+  const dd=proyDays(m);
+  const vr=['19','5','0'].map(b=>proyRemain(m,'v',b,o));
+  const cr=['19','5','0'].map(b=>proyRemain(m,'c',b,o));
+  const realV=[m.ing.ventas19,m.ing.ventas5,m.ing.ventasExcl];
+  const realC=[m.cmp.compras19,m.cmp.compras5,m.cmp.comprasExcl];
+  const vt=[realV[0]+vr[0],realV[1]+vr[1],realV[2]+vr[2]];
+  const ct=[realC[0]+cr[0],realC[1]+cr[1],realC[2]+cr[2]];
+  const genBase=vt[0]*0.19+vt[1]*0.05, descBase=ct[0]*0.19+ct[1]*0.05;
+  const genBaseReal=realV[0]*0.19+realV[1]*0.05, descBaseReal=realC[0]*0.19+realC[1]*0.05;
+  const otrosReal=m.totalIva-(m.imp.ivaGen19+m.imp.ivaGen5)-(m.imp.ivaDescCompras19+m.imp.ivaDescCompras5);
+  const otrosProy=dd.elapsed>0?otrosReal*(dd.total/dd.elapsed):otrosReal;
+  const totalProy=genBase-descBase+otrosProy;
+  return {dd,vr,cr,realV,realC,vt,ct,genBase,descBase,genBaseReal,descBaseReal,otrosReal,otrosProy,totalProy,realTotal:m.totalIva};
+}
+function defaultProyMes(md){
+  let best=null;
+  for(let i=0;i<12;i++){ if(md[i] && proyDays(md[i]).remaining>0) best=i; }
+  if(best===null){ for(let i=0;i<12;i++) if(md[i]) best=i; }
+  return best;
+}
+function cellP(v){ if(v===0||v==null)return '<td class="num z">—</td>'; const cls=v<0?'num neg':'num'; return `<td class="${cls}">${v<0?'('+fmt0.format(Math.round(-v))+')':fmt0.format(Math.round(v))}</td>`; }
+function fmtCellTxt(v){ return (v===0||v==null)?'—':(v<0?'('+fmt0.format(Math.round(-v))+')':fmt0.format(Math.round(v))); }
+function applyProyDynamic(P,o){
+  const proyObj=cfg.proy, lvl=P.totalProy;
+  const col=lvl<=0?'var(--lav-ink)':lvl<=proyObj?'#2f9d6e':lvl<=proyObj*1.5?'#e0872f':'#d1495b';
+  const pct=Math.min(100,Math.max(2,lvl/(proyObj*3)*100));
+  document.getElementById("proyKpis").innerHTML=
+    kpiCard("IVA generado proyectado",money(P.genBase))+
+    kpiCard("IVA descontable proyectado",money(P.descBase))+
+    kpiCard("IVA total proyectado del mes",money3(P.totalProy),`vs objetivo ${money(proyObj)}`,true)+
+    kpiCard(P.totalProy>proyObj?"Excedería lo proyectado":"Dentro de lo proyectado",money(P.totalProy-proyObj));
+  document.getElementById("proyMedidor").innerHTML=
+    `<div class="m-top"><span class="m-lbl">Nivel de IVA proyectado del mes</span><span class="m-val" style="color:${col}">${money(lvl)}</span></div>`+
+    `<div class="med-bar"><div class="med-fill" style="width:${pct}%;background:${col}"></div></div>`+
+    `<div class="med-ticks"><span>$0</span><span>objetivo ${money(proyObj)}</span><span>${money(proyObj*3)}</span></div>`;
+  const over=P.totalProy>proyObj;
+  document.getElementById("proyAlert").innerHTML=alertHTML(over?"warn":"ok",
+    over?"Proyección por encima de lo esperado":"Proyección dentro de lo esperado",
+    `El IVA del mes completo se proyecta en <b>${money(P.totalProy)}</b>, ${over?`<b>superior</b> a la proyección de <b>${money(proyObj)}</b> (exceso ${money(P.totalProy-proyObj)}).`:`dentro de la proyección de <b>${money(proyObj)}</b> (margen ${money(proyObj-P.totalProy)}).`} El reporte real del periodo es ${money(P.realTotal)}.`);
+  const pfv=document.getElementById("pfVal"); pfv.textContent=money(lvl); pfv.style.color=col;
+  document.getElementById("pfSub").textContent=lvl<=0?'A favor':lvl<=proyObj?'En objetivo':lvl<=proyObj*1.5?'Cerca del límite':'Por encima';
+  const pfb=document.getElementById("pfBar"); pfb.style.width=pct+'%'; pfb.style.background=col;
+}
+function patchProy(){
+  const m=monthData()[uiProyMes]; if(!m) return;
+  const o=getProyO(uiProyMes), P=computeProy(m,o);
+  const vk=["v19","v5","v0"], ck=["c19","c5","c0"];
+  const setC=(id,v)=>{const el=document.getElementById(id);if(!el)return;el.textContent=fmtCellTxt(v);el.className='num'+(v<0?' neg':'')+((v===0||v==null)?' z':'');};
+  const syncLine=(k,rem,tot)=>{
+    const sl=document.querySelector(`input.pfac[data-pf="${k}"]`); if(sl&&document.activeElement!==sl)sl.value=o.f[k]||0;
+    const lb=document.getElementById('pfv-'+k); if(lb)lb.textContent=((o.f[k]||0)>0?'+':'')+(o.f[k]||0)+'%';
+    const pc=document.getElementById('pcell-'+k); if(pc&&document.activeElement!==pc)pc.value=fmt0.format(Math.round(rem));
+    setC('ptot-'+k,tot);
+  };
+  vk.forEach((k,i)=>syncLine(k,P.vr[i],P.vt[i]));
+  ck.forEach((k,i)=>syncLine(k,P.cr[i],P.ct[i]));
+  setC('pr-gen-r',P.genBase-P.genBaseReal); setC('pr-gen-t',P.genBase);
+  setC('pr-desc-r',-(P.descBase-P.descBaseReal)); setC('pr-desc-t',-P.descBase);
+  setC('pr-otr-r',P.otrosProy-P.otrosReal); setC('pr-otr-t',P.otrosProy);
+  setC('pr-tot-r',P.totalProy-P.realTotal); setC('pr-tot-t',P.totalProy);
+  const fvt=document.getElementById('fvTxt'); if(fvt)fvt.textContent=(o.fV>0?'+':'')+o.fV+'%';
+  const fct=document.getElementById('fcTxt'); if(fct)fct.textContent=(o.fC>0?'+':'')+o.fC+'%';
+  applyProyDynamic(P,o);
+}
+function renderProy(){
+  const md=monthData(); const any=md.some(x=>x);
+  document.getElementById("proyEmpty").hidden=any;
+  document.getElementById("proyBody").hidden=!any;
+  if(!any){ document.getElementById("proyFloat").hidden=true; return; }
+  if(uiProyMes===null || !md[uiProyMes]) uiProyMes=defaultProyMes(md);
+  if(uiProyMes===null) return;
+  const sel=document.getElementById("proyMesSel");
+  let opts=""; for(let i=0;i<12;i++){ if(md[i]){ const dd=proyDays(md[i]); opts+=`<option value="${i}">${MESES[i].slice(0,1)+MESES[i].slice(1).toLowerCase()} ${dd.remaining>0?'(parcial)':'(completo)'}</option>`; } }
+  sel.innerHTML=opts; sel.value=String(uiProyMes);
+  const m=md[uiProyMes], o=getProyO(uiProyMes), P=computeProy(m,o);
+  document.getElementById("proyDays").innerHTML=`Días transcurridos <b>${P.dd.elapsed}</b> · restantes <b>${P.dd.remaining}</b> · mes <b>${P.dd.total}</b> · base <b>${Math.round((P.dd.elapsed?P.dd.remaining/P.dd.elapsed:0)*100)}%</b>`;
+  const fvS=document.getElementById("fvSlider"),fcS=document.getElementById("fcSlider");
+  if(fvS&&document.activeElement!==fvS)fvS.value=o.fV;
+  if(fcS&&document.activeElement!==fcS)fcS.value=o.fC;
+  const numCell=(v,id)=>`<td class="num${v<0?' neg':''}${(v===0||v==null)?' z':''}"${id?` id="${id}"`:''}>${fmtCellTxt(v)}</td>`;
+  const slInp=(key,side)=>`<td class="pedit"><span class="pfac-wrap ${side}"><input type="range" class="pfac" data-pf="${key}" min="-50" max="150" step="1" value="${o.f[key]||0}"><b class="pfac-v" id="pfv-${key}">${(o.f[key]||0)>0?'+':''}${o.f[key]||0}%</b></span></td>`;
+  const remInp=(key,val)=>`<td class="pedit"><input class="pcell" data-pb="${key}" id="pcell-${key}" value="${fmt0.format(Math.round(val))}" inputmode="numeric"></td>`;
+  let hh=`<thead><tr><th>Concepto</th><th>Real (${P.dd.d1}–${P.dd.d2})</th><th>Variación (mouse)</th><th>Proyectado restante ✏</th><th>Total mes proyectado</th></tr></thead><tbody>`;
+  hh+=`<tr class="grp ing"><td>VENTAS (bases)</td><td></td><td></td><td></td><td></td></tr>`;
+  const vlab=["Ventas Gravadas 19%","Ventas Gravadas 5%","Ventas Excluidas 0%"], vk=["v19","v5","v0"];
+  [0,1,2].forEach(i=>{ hh+=`<tr><td>${vlab[i]}</td>${numCell(P.realV[i])}${slInp(vk[i],'v')}${remInp(vk[i],P.vr[i])}${numCell(P.vt[i],'ptot-'+vk[i])}</tr>`; });
+  hh+=`<tr class="total"><td>IVA Generado (gravado)</td>${numCell(P.genBaseReal)}<td></td>${numCell(P.genBase-P.genBaseReal,'pr-gen-r')}${numCell(P.genBase,'pr-gen-t')}</tr>`;
+  hh+=`<tr class="grp com"><td>COMPRAS (bases)</td><td></td><td></td><td></td><td></td></tr>`;
+  const clab=["Compras Gravadas 19%","Compras Gravadas 5%","Compras Excluidas 0%"], ck=["c19","c5","c0"];
+  [0,1,2].forEach(i=>{ hh+=`<tr><td>${clab[i]}</td>${numCell(P.realC[i])}${slInp(ck[i],'c')}${remInp(ck[i],P.cr[i])}${numCell(P.ct[i],'ptot-'+ck[i])}</tr>`; });
+  hh+=`<tr class="total"><td>IVA Descontable (gravado)</td>${numCell(-P.descBaseReal)}<td></td>${numCell(-(P.descBase-P.descBaseReal),'pr-desc-r')}${numCell(-P.descBase,'pr-desc-t')}</tr>`;
+  hh+=`<tr><td>Otros (devol., gastos, arrendo, rete)</td>${numCell(P.otrosReal)}<td></td>${numCell(P.otrosProy-P.otrosReal,'pr-otr-r')}${numCell(P.otrosProy,'pr-otr-t')}</tr>`;
+  hh+=`<tr class="grand"><td>TOTAL IVA PROYECTADO</td>${numCell(P.realTotal)}<td></td>${numCell(P.totalProy-P.realTotal,'pr-tot-r')}${numCell(P.totalProy,'pr-tot-t')}</tr></tbody>`;
+  document.getElementById("proyTable").innerHTML=hh;
+  applyProyDynamic(P,o);
+}
+
+
+// tabs
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected","false"));
+  t.setAttribute("aria-selected","true");
+  const map={cons:"panel-cons",mes:"panel-mes",proy:"panel-proy",anio:"panel-anio",obs:"panel-obs"};
+  for(const k in map) document.getElementById(map[k]).hidden = (map[k]!==map[t.dataset.tab]);
+  const pf=document.getElementById("proyFloat"); if(pf) pf.hidden=(t.dataset.tab!=="proy");
+  if(t.dataset.tab==="cons"){ setTimeout(()=>{charts.cvc&&charts.cvc.resize();charts.civa&&charts.civa.resize();},30); }
+  if(t.dataset.tab==="anio"){ setTimeout(()=>{charts.yvc&&charts.yvc.resize();charts.yiva&&charts.yiva.resize();},30); }
+}));
+function goTab(name){ document.querySelector(`.tab[data-tab="${name}"]`).click(); }
+
+// selector de cuatrimestre (consolidado)
+document.getElementById("cuatSeg").addEventListener("click",e=>{const b=e.target.closest("[data-cuat]");if(!b)return;uiCuat=+b.dataset.cuat;renderCons();});
+// observaciones: cuatrimestre + mes
+document.getElementById("obsCuatSeg").addEventListener("click",e=>{const b=e.target.closest("[data-ocuat]");if(!b)return;uiObsCuat=+b.dataset.ocuat;uiObsMes=null;renderObs();});
+document.getElementById("obsMesSel").addEventListener("change",e=>{uiObsMes=(e.target.value==="all")?null:+e.target.value;renderObs();});
+// proyección: selector + deslizadores (general y por línea) + bases editables + reset
+document.getElementById("proyMesSel").addEventListener("change",e=>{ uiProyMes=+e.target.value; renderProy(); });
+document.getElementById("fvSlider").addEventListener("input",e=>{ const v=Math.round(+e.target.value)||0; const o=getProyO(uiProyMes); o.fV=v; ['v19','v5','v0'].forEach(k=>{o.f[k]=v;delete o.ov[k];}); saveStore(); patchProy(); });
+document.getElementById("fcSlider").addEventListener("input",e=>{ const v=Math.round(+e.target.value)||0; const o=getProyO(uiProyMes); o.fC=v; ['c19','c5','c0'].forEach(k=>{o.f[k]=v;delete o.ov[k];}); saveStore(); patchProy(); });
+document.getElementById("proyTable").addEventListener("input",e=>{ const sl=e.target.closest("input.pfac"); if(!sl)return; const o=getProyO(uiProyMes); const k=sl.dataset.pf; o.f[k]=Math.round(+sl.value)||0; delete o.ov[k]; saveStore(); patchProy(); });
+document.getElementById("proyTable").addEventListener("change",e=>{ const base=e.target.closest("input.pcell"); if(!base)return; const o=getProyO(uiProyMes); o.ov[base.dataset.pb]=Math.round(parseMoney(base.value)); saveStore(); renderProy(); });
+document.getElementById("proyReset").onclick=()=>{ state.proy[`2026-${uiProyMes}`]={fV:0,fC:0,f:{v19:0,v5:0,v0:0,c19:0,c5:0,c0:0},ov:{}}; saveStore(); renderProy(); toast("Proyección reiniciada","ok"); };
+document.getElementById("obsNotes").addEventListener("input",e=>{ state.notes[noteKey()]=e.target.value; saveStore(); });
+// prorrateo: IVA común automático del balance, con ajuste manual opcional
+function applyPror(comunIVA, manual){
+  const m=currentModel; if(!m||m.multi)return;
+  const auto=(m.prorrateoCalc&&m.prorrateoCalc.comunIVAAuto!=null)?m.prorrateoCalc.comunIVAAuto:-(m.imp.ivaArrendo19||0)-(m.imp.ivaGastos19||0);
+  const pctExcl=m.ing.total?(m.ing.ventasExcl+m.ing.devExcl)/m.ing.total:0;
+  const pror=comunIVA*pctExcl;
+  const set=p=>{ p.imp.prorrateo=pror; p.totalIva=p.controlNeto+pror; p.prorrateoCalc={comunIVA,comunIVAAuto:auto,exclNet:m.ing.ventasExcl+m.ing.devExcl,ingTotalNet:m.ing.total,pctExcl,prorrateo:pror,deducible:comunIVA-pror,manual:manual}; };
+  set(m); if(state.periods[m.id])set(state.periods[m.id]); if(pendingModel&&pendingModel.id===m.id)set(pendingModel);
+  saveStore(); render();
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest&&e.target.closest(".pror-btn"); if(!b)return;
+  const m=currentModel; if(!m||m.multi)return;
+  if(b.dataset.prac==="edit"){
+    const cur=m.prorrateoCalc?m.prorrateoCalc.comunIVA:0;
+    const v=prompt("IVA de operaciones comunes (arrendo + gastos comunes + servicios):", fmt0.format(Math.round(cur)));
+    if(v!=null){ applyPror(parseMoney(v),true); toast("Prorrateo ajustado","ok"); }
+  }else if(b.dataset.prac==="auto"){
+    const auto=(m.prorrateoCalc&&m.prorrateoCalc.comunIVAAuto!=null)?m.prorrateoCalc.comunIVAAuto:-(m.imp.ivaArrendo19||0)-(m.imp.ivaGastos19||0);
+    applyPror(auto,false); toast("IVA común automático del balance","ok");
+  }
+});
+// fecha de corte editable
+const corteInput=document.getElementById("corteInput");
+corteInput.addEventListener("change",()=>{ const v=corteInput.value.trim(); state.corteOverride=v||null; saveStore(); render(); toast(v?"Fecha de corte actualizada":"Fecha de corte automática"); });
+corteInput.addEventListener("keydown",e=>{ if(e.key==="Enter") corteInput.blur(); });
+document.getElementById("corteAuto").onclick=()=>{ state.corteOverride=null; saveStore(); render(); toast("Fecha de corte automática (último balance)"); };
+
+// modal cargue
+let fVen=null,fDvv=null,fCom=null,fDvc=null,fBal=null;
+const scrim=document.getElementById("scrim");
+document.getElementById("btnLoad").onclick=()=>{ fVen=fDvv=fCom=fDvc=fBal=null; resetDrops(); scrim.classList.add("on"); };
+document.getElementById("mCancel").onclick=()=>scrim.classList.remove("on");
+scrim.addEventListener("click",e=>{if(e.target===scrim)scrim.classList.remove("on");});
+const DROPS=[["Ven","1 · Reporte de Ventas"],["Dvv","2 · Devoluciones en Ventas"],["Com","3 · Reporte de Compras"],["Dvc","4 · Devoluciones en Compra"],["Bal","5 · Balance de Prueba"]];
+function resetDrops(){
+  DROPS.forEach(([s,lbl])=>{ document.getElementById(s.toLowerCase()+"Name").textContent=lbl; document.getElementById("drop"+s).classList.remove("has"); document.getElementById("file"+s).value=""; });
+  document.getElementById("loadErr").classList.remove("on");
+  document.getElementById("mProcess").disabled=true;
+}
+function wireDrop(s,setter){ document.getElementById("file"+s).onchange=e=>{ const fl=e.target.files[0]||null; setter(fl); if(fl){document.getElementById(s.toLowerCase()+"Name").textContent=fl.name;document.getElementById("drop"+s).classList.add("has");}else{document.getElementById("drop"+s).classList.remove("has");} checkProcess(); }; }
+wireDrop("Ven",fl=>fVen=fl); wireDrop("Dvv",fl=>fDvv=fl); wireDrop("Com",fl=>fCom=fl); wireDrop("Dvc",fl=>fDvc=fl); wireDrop("Bal",fl=>fBal=fl);
+function checkProcess(){ document.getElementById("mProcess").disabled=!(fVen&&fCom&&fBal); }
+
+document.getElementById("mProcess").onclick=async()=>{
+  const err=document.getElementById("loadErr"); err.classList.remove("on");
+  try{
+    const [wbV,wbC,wbB]=await Promise.all([readWB(fVen),readWB(fCom),readWB(fBal)]);
+    const wbD = fDvv ? await readWB(fDvv) : null;
+    const wbDC= fDvc ? await readWB(fDvc) : null;
+    const bal=parseBalance(sheetRows(wbB));
+    if(Object.keys(bal.acc).length<10) throw new Error("El Balance de Prueba (recuadro 5) no parece válido: no se encontraron cuentas.");
+    const V=parseDocReport(sheetRows(wbV));
+    const C=parseDocReport(sheetRows(wbC));
+    const DVV = wbD ? parseDocReport(sheetRows(wbD)) : null;
+    const DVC = wbDC? parseDocReport(sheetRows(wbDC)) : null;
+    if(!bal.periodo && !V.periodo && !C.periodo) throw new Error("No se detectó el periodo. ¿Son los reportes correctos de Celeste?");
+    const model=buildModel(V,DVV,C,DVC,bal);
+    currentModel=model; pendingModel=model; selMonths=[model.mes];
+    document.getElementById("btnSave").disabled=false;
+    scrim.classList.remove("on");
+    render();
+    goTab("mes");
+    const dup = state.periods[model.id];
+    const cuadra = Math.abs(model.ajuste)<1;
+    toast(`Periodo ${model.mesNombre.slice(0,3)} ${model.year} (${model.tipo}) cargado${cuadra?' y cuadrado con el balance':' — revisa el cuadre'}. ${dup?'Reemplaza el guardado al grabar.':'Revisa y pulsa Grabar.'}`, cuadra?"ok":"bad");
+  }catch(ex){
+    err.textContent="⚠ "+ex.message; err.classList.add("on");
+  }
+};
+
+// grabar
+document.getElementById("btnSave").onclick=()=>{
+  if(!pendingModel){ toast("Primero carga un periodo","bad"); return; }
+  const m=pendingModel;
+  // si guardas un completo y existen fracciones del mismo mes, avisar
+  const fracs=Object.keys(state.periods).filter(k=>{const p=state.periods[k];return p.mes===m.mes&&p.year===m.year&&p.tipo==="fraccion";});
+  if(m.tipo==="completo" && fracs.length){
+    if(confirm(`Hay ${fracs.length} fracción(es) guardada(s) de ${m.mesNombre} ${m.year}. ¿Eliminarlas y dejar solo el mes completo?`)){
+      fracs.forEach(k=>delete state.periods[k]);
+    }
+  }
+  m.savedAt=new Date().toISOString();
+  state.periods[m.id]=m;
+  saveStore(); pendingModel=null;
+  render();
+  toast(`Guardado: ${m.mesNombre.slice(0,1)+m.mesNombre.slice(1).toLowerCase()} ${m.year} (${m.tipo})`,"ok");
+};
+
+// eliminar (desde toolbar => elige)
+// tarjetas de meses: ver / eliminar
+document.getElementById("mesCards").addEventListener("click",e=>{
+  const del=e.target.closest("[data-dmon]"); const view=e.target.closest("[data-vmon]");
+  if(del){ e.stopPropagation(); delMonth(+del.dataset.dmon); return; }
+  if(view){ const i=+view.dataset.vmon; const md=monthData(); if(!md[i])return;
+    const p=selMonths.indexOf(i); if(p>=0)selMonths.splice(p,1); else selMonths.push(i);
+    selMonths.sort((a,b)=>a-b);
+    currentModel = selMonths.length? combineMonths(selMonths) : null;
+    pendingModel=null; document.getElementById("btnSave").disabled=true; render();
+    const b=document.getElementById("mesBody"); if(selMonths.length&&b&&b.scrollIntoView)b.scrollIntoView({behavior:"smooth",block:"nearest"});
+  }
+});
+function delMonth(i){
+  const keys=Object.keys(state.periods).filter(k=>state.periods[k].mes===i);
+  if(!keys.length)return;
+  const nm=MESES[i].slice(0,1)+MESES[i].slice(1).toLowerCase();
+  const anyClosed=keys.some(k=>state.periods[k].closed);
+  if(!confirm(`¿Eliminar ${nm}?${anyClosed?" Es un periodo CERRADO y ya presentado.":" Esto permite volver a cargar el mes completo."}`)) return;
+  keys.forEach(k=>delete state.periods[k]);
+  const p=selMonths.indexOf(i); if(p>=0)selMonths.splice(p,1);
+  currentModel = selMonths.length? combineMonths(selMonths) : null;
+  saveStore(); render(); toast("Mes eliminado","ok");
+}
+// IVA pagado 2025 (editable)
+document.getElementById("paidCards").addEventListener("input",e=>{ const inp=e.target.closest("[data-paid]"); if(!inp)return; state.paid2025[+inp.dataset.paid]=parseMoney(inp.value); saveStore(); });
+document.getElementById("paidCards").addEventListener("blur",e=>{ const inp=e.target.closest("[data-paid]"); if(!inp)return; inp.value=fmt0.format(parseMoney(inp.value)); },true);
+// fecha de corte por calendario
+const corteDate=document.getElementById("corteDate");
+document.getElementById("corteCal").onclick=()=>{ try{ corteDate.showPicker?corteDate.showPicker():corteDate.click(); }catch(e){ corteDate.click(); } };
+corteDate.addEventListener("change",()=>{ const v=corteDate.value; if(!v)return; const p=v.split("-"); const abbr=MESES[(+p[1])-1].slice(0,3).toLowerCase(); state.corteOverride=`${p[2]}/${abbr}/${p[0]}`; saveStore(); render(); toast("Fecha de corte actualizada"); });
+
+// config observaciones
+
+// config observaciones
+["cfgProy","cfgMin","cfgMax"].forEach(id=>{
+  const el=document.getElementById(id);
+  el.value=fmt0.format(id==="cfgProy"?cfg.proy:id==="cfgMin"?cfg.min:cfg.max);
+  el.addEventListener("input",()=>{
+    const v=parseMoney(el.value);
+    if(id==="cfgProy")cfg.proy=v; if(id==="cfgMin")cfg.min=v; if(id==="cfgMax")cfg.max=v;
+    saveCfg(); renderObs();
+  });
+  el.addEventListener("blur",()=>{ el.value=fmt0.format(parseMoney(el.value)); });
+});
+
+/* ---------- respaldo (export/import JSON) ---------- */
+document.getElementById("btnShare").onclick=()=>{
+  try{
+    if(!Object.keys(state.periods).length){ toast("No hay datos guardados para compartir","bad"); return; }
+    const payload={state:state,cfg:cfg,corte:effectiveCorte(),exported:new Date().toISOString()};
+    const docClone=document.documentElement.cloneNode(true);
+    const oldB=docClone.querySelector("#shared-bootstrap"); if(oldB)oldB.remove();
+    const oldBn=docClone.querySelector("#sharedBanner"); if(oldBn)oldBn.setAttribute("hidden","");
+    const head=docClone.querySelector("head");
+    const boot=document.createElement("script");
+    boot.id="shared-bootstrap";
+    boot.textContent="window.__SHARED__="+JSON.stringify(payload)+";";
+    head.insertBefore(boot, head.firstChild);
+    const htmlStr="<!doctype html>\n"+docClone.outerHTML;
+    const blob=new Blob([htmlStr],{type:"text/html"});
+    const corteTxt=(effectiveCorte()||"fecha").replace(/\//g," ");
+    const fname=`${corteTxt} - Control de IVA - La Nota Musical.html`;
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=fname; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+    toast("Archivo compartible generado: "+fname,"ok");
+  }catch(ex){ toast("No se pudo generar el archivo compartible","bad"); }
+};
+if(window.__SHARED__){ const sb=document.getElementById("sharedBanner"); if(sb){ sb.hidden=false; const c=sb.querySelector(".sb-corte"); if(c)c.textContent=(window.__SHARED__.corte||"—"); } const tb=document.querySelector(".toolbar"); if(tb)tb.style.display="none"; }
+document.getElementById("btnBackup").onclick=()=>{
+  const choice=prompt("Respaldo de datos:\n\nEscribe 1 para DESCARGAR una copia (.json)\nEscribe 2 para RESTAURAR desde un archivo","1");
+  if(choice==="1"){
+    const blob=new Blob([JSON.stringify({state,cfg,exported:new Date().toISOString()},null,2)],{type:"application/json"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download=`Respaldo_IVA_La_Nota_Musical_${new Date().toISOString().slice(0,10)}.json`; a.click();
+    toast("Respaldo descargado","ok");
+  }else if(choice==="2"){
+    document.getElementById("restoreFile").click();
+  }
+};
+document.getElementById("restoreFile").onchange=e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{ try{ const d=JSON.parse(ev.target.result);
+    if(!d.state||!d.state.periods) throw new Error("Archivo no válido");
+    if(confirm("Restaurar reemplazará los datos actuales. ¿Continuar?")){
+      state=d.state; if(!state.notes)state.notes={}; if(!("corteOverride" in state))state.corteOverride=null; if(d.cfg)cfg=d.cfg; saveStore(); saveCfg(); currentModel=null; uiCuat=uiObsCuat=null; uiObsMes=null; render();
+      ["cfgProy","cfgMin","cfgMax"].forEach(id=>{document.getElementById(id).value=fmt0.format(id==="cfgProy"?cfg.proy:id==="cfgMin"?cfg.min:cfg.max);});
+      toast("Datos restaurados","ok");
+    }
+  }catch(ex){ toast("No se pudo leer el respaldo","bad"); } };
+  r.readAsText(f); e.target.value="";
+};
+
+/* ===========================================================
+   PDF (para WhatsApp)
+   =========================================================== */
+document.getElementById("btnPdf").onclick=()=>{
+  const md=monthData(); const any=md.some(x=>x)||currentModel;
+  if(!any){ toast("Carga o graba un periodo primero","bad"); return; }
+  const target = currentModel || md.filter(x=>x).pop();
+  buildPDF(target);
+};
+
+function buildPDF(target){
+  const {jsPDF}=window.jspdf;
+  const md=monthData();
+  const ink=[43,51,80],soft=[90,99,132],mint=[69,177,132],peach=[223,138,94],rose=[200,86,106],sky=[79,147,216],lav=[122,99,201],ok=[46,157,102];
+  const corte=effectiveCorte()||(target?target.corte:"");
+  const doc=new jsPDF({unit:"pt",format:"a4",orientation:"landscape"});
+  function headerBar(sub){
+    const W=doc.internal.pageSize.getWidth();
+    doc.setFillColor(223,243,232);doc.rect(0,0,W,56,"F");
+    doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.setFontSize(14);
+    doc.text("Control de IVA · La Nota Musical",34,25);
+    doc.setFont("helvetica","normal");doc.setFontSize(8.5);doc.setTextColor(...soft);
+    doc.text("Francisco Javier Viveros Vásquez · NIT 2.708.235-1",34,39);
+    doc.setFontSize(9.5);doc.setTextColor(...ink);doc.setFont("helvetica","bold");doc.text(sub,34,51);
+    doc.setTextColor(...peach);doc.setFontSize(9);
+    doc.text(`Fecha de corte: ${corte}`,W-34,51,{align:"right"});
+  }
+  const grpRow=(txt,span,col)=>[{content:txt,colSpan:span,styles:{fillColor:col,textColor:[255,255,255],fontStyle:"bold",halign:"left"}}];
+  function kpiCardsPDF(x,y,w,items){
+    items.forEach((it,i)=>{ const yy=y+i*64, ac=it[2];
+      doc.setFillColor(ac?223:251,ac?243:252,ac?232:255); doc.setDrawColor(ac?69:225,ac?177:230,ac?132:242);
+      doc.roundedRect(x,yy,w,54,8,8,"FD");
+      doc.setFont("helvetica","bold");doc.setFontSize(7.5);doc.setTextColor(90,99,132);
+      doc.text(String(it[0]).toUpperCase(),x+12,yy+19);
+      doc.setFontSize(14);doc.setTextColor(ac?46:43,ac?157:51,ac?102:80);doc.setFont("helvetica","bold");
+      doc.text(it[1],x+12,yy+41);
+    });
+  }
+  function pctMiniPDF(x,y,w,items){
+    const cw=(w-8)/2, ch=34, gap=7;
+    items.forEach((it,i)=>{
+      const col=i%2, row=Math.floor(i/2), cx=x+col*(cw+8), cy=y+row*(ch+gap), tag=it[2];
+      const bg=tag==='v'?[220,235,252]:[233,226,251], fg=tag==='v'?[79,147,216]:[122,99,201];
+      doc.setFillColor(bg[0],bg[1],bg[2]);doc.setDrawColor(231,234,244);
+      doc.roundedRect(cx,cy,cw,ch,6,6,"FD");
+      doc.setFont("helvetica","bold");doc.setFontSize(6.2);doc.setTextColor(90,99,132);
+      doc.text(String(it[0]).toUpperCase(),cx+7,cy+12);
+      doc.setFontSize(9.5);doc.setTextColor(fg[0],fg[1],fg[2]);doc.setFont("helvetica","bold");
+      doc.text(it[1],cx+7,cy+26);
+    });
+  }
+
+  // PÁGINA 1: CONSOLIDADO CUATRIMESTRE (horizontal)
+  headerBar(`Consolidado · ${QLBL[uiCuat!==null?uiCuat:defaultCuat(md)]}`);
+  const qc=uiCuat!==null?uiCuat:defaultCuat(md);
+  const months=Q[qc].filter(mi=>md[mi]);
+  if(months.length){
+    const span=months.length+2;
+    const head=["Cuenta / Concepto",...months.map(mi=>MESES[mi].slice(0,3)),"Cuatrimestre"];
+    const body=[];
+    body.push(grpRow("INGRESOS OPERACIONALES",span,sky));
+    DEF.ing.forEach(([k,l])=>body.push([l,...months.map(mi=>money(md[mi].ing[k])),money(months.reduce((s,mi)=>s+md[mi].ing[k],0))]));
+    body.push([{content:"TOTAL INGRESOS",styles:{fontStyle:"bold"}},...months.map(mi=>({content:money(md[mi].ing.total),styles:{fontStyle:"bold"}})),{content:money(months.reduce((s,mi)=>s+md[mi].ing.total,0)),styles:{fontStyle:"bold"}}]);
+    body.push(grpRow("COMPRAS DE MERCANCÍAS",span,lav));
+    DEF.cmp.forEach(([k,l])=>body.push([l,...months.map(mi=>money(md[mi].cmp[k])),money(months.reduce((s,mi)=>s+md[mi].cmp[k],0))]));
+    body.push([{content:"TOTAL COMPRAS",styles:{fontStyle:"bold"}},...months.map(mi=>({content:money(md[mi].cmp.total),styles:{fontStyle:"bold"}})),{content:money(months.reduce((s,mi)=>s+md[mi].cmp.total,0)),styles:{fontStyle:"bold"}}]);
+    body.push(grpRow("IMPUESTOS",span,peach));
+    DEF.imp.forEach(([k,l])=>body.push([l,...months.map(mi=>money(md[mi].imp[k])),money(months.reduce((s,mi)=>s+md[mi].imp[k],0))]));
+    const ivaQ=months.reduce((s,mi)=>s+md[mi].totalIva,0);
+    body.push([{content:"TOTAL IVA DEL PERIODO",styles:{fontStyle:"bold",fillColor:mint,textColor:[255,255,255]}},...months.map(mi=>({content:money(md[mi].totalIva),styles:{fontStyle:"bold",fillColor:mint,textColor:[255,255,255]}})),{content:money3(ivaQ),styles:{fontStyle:"bold",fillColor:mint,textColor:[255,255,255]}}]);
+    const conceptW=150, monthW=60, cuatW=70;
+    const cStyles={0:{halign:"left",cellWidth:conceptW}};
+    months.forEach((mi,i)=>cStyles[i+1]={halign:"right",cellWidth:monthW});
+    cStyles[months.length+1]={halign:"right",cellWidth:cuatW};
+    const tableW=conceptW+months.length*monthW+cuatW;
+    doc.autoTable({startY:64,head:[head],body,theme:"grid",tableWidth:tableW,
+      styles:{font:"helvetica",fontSize:7,cellPadding:2,textColor:ink,lineColor:[231,234,244],halign:"right",overflow:"linebreak"},
+      headStyles:{fillColor:[245,247,252],textColor:soft,fontStyle:"bold",halign:"right"},
+      columnStyles:cStyles,margin:{left:34}});
+    const Wc=doc.internal.pageSize.getWidth();
+    const cardsX=Math.min(34+tableW+18, Wc-34-200);
+    const ingQ=months.reduce((s,mi)=>s+md[mi].ing.total,0), comQ=months.reduce((s,mi)=>s+md[mi].cmp.total,0);
+    const genQ=months.reduce((s,mi)=>s+(md[mi].imp.ivaGen19+md[mi].imp.ivaGen5+md[mi].imp.ivaGenDVC19+md[mi].imp.ivaGenDVC5),0);
+    const descQ=months.reduce((s,mi)=>s-(md[mi].imp.ivaDescDVV19+md[mi].imp.ivaDescDVV5+md[mi].imp.ivaDescImport19+md[mi].imp.ivaDescCompras19+md[mi].imp.ivaDescCompras5+md[mi].imp.ivaGastos19+md[mi].imp.ivaArrendo19),0);
+    kpiCardsPDF(cardsX,70,200,[["Total ingresos",money(ingQ)],["Total compras",money(comQ)],["IVA generado",money(genQ)],["IVA descontable",money(descQ)],["IVA del cuatrimestre",money3(ivaQ),true]]);
+    const netTq=(obj,keys)=>months.reduce((s,mi)=>s+keys.reduce((a,k)=>a+md[mi][obj][k],0),0);
+    const pctX=cardsX;
+    doc.setFont("helvetica","bold");doc.setFontSize(8.5);doc.setTextColor(...ink);
+    doc.text("Ventas y compras netas por %",pctX,392);
+    pctMiniPDF(pctX,400,200,[
+      ["Ventas 19%",money(netTq("ing",["ventas19","devVentas19"])),"v"],
+      ["Ventas 5%",money(netTq("ing",["ventas5","devVentas5"])),"v"],
+      ["Ventas 0%",money(netTq("ing",["ventasExcl","devExcl"])),"v"],
+      ["Compras 19%",money(netTq("cmp",["compras19","devCompra19"])),"c"],
+      ["Compras 5%",money(netTq("cmp",["compras5","devCompra5"])),"c"],
+      ["Compras 0%",money(netTq("cmp",["comprasExcl","devCompra0"])),"c"]
+    ]);
+  }else{ doc.setFontSize(10);doc.setTextColor(...soft);doc.text("Sin datos cargados en este cuatrimestre.",34,90); }
+
+  // PÁGINA 2: REPORTE DEL MES (horizontal)
+  doc.addPage("a4","landscape");
+  const tnm = target?((target.multi?target.mesNombre:(target.mesNombre.slice(0,1)+target.mesNombre.slice(1).toLowerCase()))+" "+target.year):"";
+  headerBar(`Reporte del mes · ${tnm}${target?(target.multi?' ('+target.rango+' seleccionados)':(target.tipo==='completo'?' (mes completo)':' (fracción '+target.rango+')')):''}`);
+  if(target){
+    const mb=[];
+    mb.push(grpRow("INGRESOS OPERACIONALES",3,sky));
+    DEF.ing.forEach(([k,l])=>mb.push([l,money(target.ing[k]),""]));
+    mb.push([{content:"TOTAL INGRESOS",styles:{fontStyle:"bold"}},{content:money(target.ing.total),styles:{fontStyle:"bold"}},""]);
+    mb.push(grpRow("COMPRAS DE MERCANCÍAS",3,lav));
+    DEF.cmp.forEach(([k,l])=>mb.push([l,money(target.cmp[k]),""]));
+    mb.push([{content:"TOTAL COMPRAS",styles:{fontStyle:"bold"}},{content:money(target.cmp.total),styles:{fontStyle:"bold"}},""]);
+    mb.push(grpRow("IMPUESTOS",3,peach));
+    DEF.imp.forEach(([k,l])=>mb.push([l,"",money(target.imp[k])]));
+    mb.push([{content:"TOTAL IVA DEL PERIODO",styles:{fontStyle:"bold",fillColor:mint,textColor:[255,255,255]}},{content:"",styles:{fillColor:mint}},{content:money(target.totalIva),styles:{fontStyle:"bold",fillColor:mint,textColor:[255,255,255]}}]);
+    doc.autoTable({startY:64,head:[["Cuenta / Concepto","Base","Valor IVA"]],body:mb,theme:"grid",
+      styles:{font:"helvetica",fontSize:7,cellPadding:2.1,textColor:ink,lineColor:[231,234,244]},
+      headStyles:{fillColor:[245,247,252],textColor:soft,fontStyle:"bold"},
+      columnStyles:{0:{halign:"left",cellWidth:300},1:{halign:"right"},2:{halign:"right"}},margin:{left:34,right:244}});
+    const Wm=doc.internal.pageSize.getWidth();
+    const gT=target.imp.ivaGen19+target.imp.ivaGen5+target.imp.ivaGenDVC19+target.imp.ivaGenDVC5;
+    const dT=-(target.imp.ivaDescDVV19+target.imp.ivaDescDVV5+target.imp.ivaDescImport19+target.imp.ivaDescCompras19+target.imp.ivaDescCompras5+target.imp.ivaGastos19+target.imp.ivaArrendo19);
+    kpiCardsPDF(Wm-34-200,70,200,[["Total ingresos",money(target.ing.total)],["Total compras",money(target.cmp.total)],["IVA generado",money(gT)],["IVA descontable",money(dT)],["TOTAL IVA",money(target.totalIva),true]]);
+  }
+
+  // PÁGINA 3: OBSERVACIONES (vertical)
+  doc.addPage("a4","portrait");
+  const W3=doc.internal.pageSize.getWidth();
+  const oc=uiObsCuat!==null?uiObsCuat:defaultCuat(md);
+  const qm=Q[oc].filter(mi=>md[mi]);
+  let oItems=(uiObsMes!==null && md[uiObsMes])?[md[uiObsMes]]:qm.map(mi=>md[mi]);
+  if(!oItems.length && target) oItems=[target];
+  const scopeLbl=(uiObsMes!==null && md[uiObsMes])?`${md[uiObsMes].mesNombre.slice(0,1)+md[uiObsMes].mesNombre.slice(1).toLowerCase()} ${md[uiObsMes].year}`:QLBL[oc];
+  headerBar(`Observaciones para gerencia · ${scopeLbl}`);
+  let y=72; const proy=cfg.proy;
+  const totalScope=oItems.reduce((s,m)=>s+m.totalIva,0), nS=oItems.length, diff=totalScope-proy*nS;
+  doc.setFont("helvetica","bold");doc.setFontSize(9.5);doc.setTextColor(...ink);
+  doc.text(`IVA del alcance: ${money(totalScope)}    Proyección: ${money(proy*nS)} (${nS}×${money(proy)})    Diferencia: ${money(diff)}`,34,y);y+=18;
+  oItems.sort((a,b)=>(a.year-b.year)||(a.mes-b.mes));
+  oItems.forEach(m=>{
+    const mn=`${m.mesNombre.slice(0,1)+m.mesNombre.slice(1).toLowerCase()} ${m.year}`;
+    if(y>790){doc.addPage("a4","portrait");y=50;}
+    doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(...ink);doc.text(mn,34,y+4);y+=11;
+    obsForPDF(m).forEach(o=>{
+      const col=o.t==="ok"?ok:o.t==="bad"?rose:peach;
+      const lines=doc.splitTextToSize(o.title+" — "+o.body,W3-78);
+      const bh=9+lines.length*10;
+      if(y>808-bh){doc.addPage("a4","portrait");y=50;}
+      doc.setFillColor(col[0],col[1],col[2]);doc.roundedRect(34,y,5,bh-4,2,2,"F");
+      doc.setFont("helvetica","normal");doc.setFontSize(8.2);doc.setTextColor(...soft);doc.text(lines,46,y+9);
+      y+=bh;
+    });
+    y+=5;
+  });
+  const note=(uiObsMes!==null && md[uiObsMes])?(state.notes[`mes:${md[uiObsMes].year}-${uiObsMes}`]||""):(state.notes[`cuat:2026-${oc}`]||"");
+  if(note && note.trim()){
+    if(y>700){doc.addPage("a4","portrait");y=50;}
+    y+=8;doc.setFont("helvetica","bold");doc.setFontSize(10);doc.setTextColor(...ink);doc.text("Observaciones del contador",34,y);y+=6;
+    const nl=doc.splitTextToSize(note.trim(),W3-82);const nh=14+nl.length*11;
+    doc.setFillColor(245,247,252);doc.setDrawColor(231,234,244);doc.roundedRect(34,y,W3-68,nh,6,6,"FD");
+    doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(...ink);doc.text(nl,44,y+16);
+  }
+
+  const tp=doc.internal.getNumberOfPages();
+  for(let i=1;i<=tp;i++){doc.setPage(i);doc.setFontSize(7.5);doc.setTextColor(...soft);
+    const Wi=doc.internal.pageSize.getWidth(),Hi=doc.internal.pageSize.getHeight();
+    doc.text(`Generado ${new Date().toLocaleString("es-CO")} · pág ${i}/${tp}`,Wi/2,Hi-16,{align:"center"});}
+  doc.save(`${(corte||"fecha").replace(/\//g," ")} - Control de IVA - La Nota Musical.pdf`);
+  toast("PDF generado — listo para WhatsApp","ok");
+}
+
+function obsForPDF(m){
+  const o=[]; const proy=cfg.proy,bmin=cfg.min,bmax=cfg.max;
+  if(m.totalIva>proy) o.push({t:"warn",title:"IVA por encima de lo proyectado",body:`IVA del periodo ${money(m.totalIva)}, superior a la proyección de ${money(proy)} (exceso ${money(m.totalIva-proy)}).`});
+  else o.push({t:"ok",title:"IVA dentro de lo proyectado",body:`IVA del periodo ${money(m.totalIva)}, dentro de la proyección de ${money(proy)} (margen ${money(proy-m.totalIva)}).`});
+  const rel=m.ing.ventasExcl-m.cmp.comprasExcl;
+  if(rel<0) o.push({t:"bad",title:"Relación negativa en 0%",body:`Ventas 0% (${money(m.ing.ventasExcl)}) menores que compras 0% (${money(m.cmp.comprasExcl)}). Diferencia ${money(rel)}. Se esperaba positiva entre ${money(bmin)} y ${money(bmax)}.`});
+  else if(rel<bmin) o.push({t:"warn",title:"Relación 0% por debajo de lo esperado",body:`Ventas − compras 0% = ${money(rel)}, menor al mínimo de ${money(bmin)}.`});
+  else if(rel>bmax) o.push({t:"warn",title:"Relación 0% por encima de lo esperado",body:`Ventas − compras 0% = ${money(rel)}, superior al máximo de ${money(bmax)}.`});
+  else o.push({t:"ok",title:"Relación del 0% correcta",body:`Ventas − compras 0% = ${money(rel)}, dentro de la banda (${money(bmin)} – ${money(bmax)}).`});
+  if(!m.rete16||m.rete16.mov===0) o.push({t:"bad",title:"ReteIVA 2408.16 sin contabilizar",body:`No hay movimiento del ReteIVA descontable (cuenta 2408.16). Verificar con la administración.`});
+  else o.push({t:"ok",title:"ReteIVA 2408.16 contabilizado",body:`La cuenta 2408.16 registra movimiento por ${money(m.rete16.deb-m.rete16.cre)}.`});
+  return o;
+}
+
+/* ---------- init ---------- */
+seedIfNeeded();
+render();
+</script>
+</body>
+</html>
